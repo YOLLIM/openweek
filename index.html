@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>주간업무보고 · 소개와 사용자 매뉴얼</title>
+<meta name="description" content="네트워크부문 · ITOA 주간업무보고 시스템 소개와 사용자 매뉴얼">
+<!-- 매뉴얼 내용(manual.js)과 화면 캡처가 public/ 아래에 있으므로 상대 주소의 기준을 public/ 으로 -->
+<base href="public/">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<style>
+  :root { --bg: #f4efe7; --ink: #1f2328; --muted: #6b7280; --line: #ebe3d6; --dark: #1a1d24; --teal: #17616b; --orange: #d4541a; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body { font-family: "Pretendard Variable", Pretendard, "Malgun Gothic", sans-serif; color: var(--ink); font-size: 15px; line-height: 1.7;
+    background: radial-gradient(900px 520px at 0% 0%, #dde9e3 0%, transparent 60%), radial-gradient(800px 600px at 100% 0%, #f3e3d4 0%, transparent 60%), var(--bg); background-attachment: fixed; }
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 0 20px 60px; }
+  header.top { display: flex; align-items: center; gap: 12px; padding: 18px 0; }
+  header.top img { height: 30px; }
+  header.top b { font-size: 16px; }
+  header.top span { color: var(--muted); font-size: 12px; }
+  .hero { background: linear-gradient(110deg, var(--dark) 0%, var(--dark) 55%, #123b40 100%); color: #fff; border-radius: 26px; padding: 40px 40px 34px; box-shadow: 0 10px 30px rgba(20,22,30,.15); }
+  .hero h1 { margin: 0 0 10px; font-size: 32px; letter-spacing: -.8px; }
+  .hero p { margin: 0; color: #c9ced8; font-size: 15.5px; }
+  .hero .chips { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 20px; }
+  .hero .chips span { background: rgba(255,255,255,.1); border: 1px solid rgba(255,255,255,.18); border-radius: 99px; padding: 5px 12px; font-size: 13px; }
+  .notice { margin: 18px 0 0; background: #fff7e6; border: 1px solid #f3d9a4; color: #7a4f00; border-radius: 14px; padding: 14px 18px; font-size: 14px; }
+  .notice code { background: #fff; border-radius: 6px; padding: 1px 6px; }
+  h2.sec { font-size: 21px; margin: 40px 4px 14px; letter-spacing: -.4px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; }
+  .card { background: #fff; border: 1px solid var(--line); border-radius: 16px; padding: 18px 20px; box-shadow: 0 1px 3px rgba(60,40,20,.05); }
+  .card h3 { margin: 0 0 6px; font-size: 16px; }
+  .card ul { margin: 6px 0 0; padding-left: 18px; color: #374151; font-size: 14px; }
+  .shot { margin: 16px 0 0; text-align: center; }
+  .shot img { max-width: 100%; border-radius: 14px; border: 1px solid #e5ddd0; box-shadow: 0 10px 28px rgba(60,40,20,.12); }
+  .tabs { display: flex; gap: 8px; margin: 0 4px 14px; }
+  .tabs button { font: inherit; font-weight: 700; border: 1px solid var(--line); background: #fff; border-radius: 12px; padding: 9px 18px; cursor: pointer; }
+  .tabs button.on { background: var(--dark); color: #fff; border-color: var(--dark); }
+  pre.run { background: #1a1d24; color: #e6e8eb; border-radius: 12px; padding: 14px 16px; overflow-x: auto; font-size: 13px; }
+  footer { text-align: center; color: var(--muted); font-size: 12px; margin-top: 40px; }
+  /* 매뉴얼 (앱의 매뉴얼 화면과 같은 모양) */
+  .man-toc { display: flex; flex-wrap: wrap; gap: 8px; background: #fff; border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; margin-bottom: 16px; }
+  .man-toc a { font-size: 12.5px; color: #374151; text-decoration: none; background: #f7f4ef; border-radius: 8px; padding: 6px 10px; font-weight: 600; }
+  .man-toc a:hover { background: #efe8de; }
+  .man-sec { background: #fff; border: 1px solid var(--line); border-radius: 12px; padding: 22px 26px; margin-bottom: 16px; box-shadow: 0 1px 3px rgba(60,40,20,.05); line-height: 1.75; font-size: 14px; scroll-margin-top: 16px; }
+  .man-sec h3 { margin: 0 0 12px; font-size: 17px; padding-bottom: 10px; border-bottom: 1px solid #f0ebe3; }
+  .man-sec h4 { margin: 18px 0 6px; font-size: 14.5px; }
+  .man-sec ol, .man-sec ul { padding-left: 22px; margin: 8px 0; }
+  .man-sec code { background: #f3f1ed; border-radius: 5px; padding: 1px 6px; font-size: 12.5px; }
+  .man-fig { margin: 14px 0 16px; text-align: center; }
+  .man-fig img { max-width: 100%; border: 1px solid #e5ddd0; border-radius: 10px; box-shadow: 0 6px 18px rgba(60,40,20,.10); cursor: zoom-in; }
+  .man-fig figcaption { font-size: 12px; color: var(--muted); margin-top: 8px; }
+  .man-tip, .man-warn { border-radius: 10px; padding: 10px 14px; margin: 10px 0; font-size: 13px; }
+  .man-tip { background: #eef6f6; color: #0f4c54; }
+  .man-warn { background: #fff7e6; color: #8a5a00; }
+  .man-faq dt { font-weight: 700; margin-top: 12px; }
+  .man-faq dd { margin: 4px 0 0; color: #4b5563; }
+  @media (max-width: 640px) { .hero { padding: 28px 22px; border-radius: 20px; } .hero h1 { font-size: 25px; } .man-sec { padding: 16px 14px; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top"><img src="img/yollim.png" alt="YOLLIM"><div><b>주간업무보고</b><br><span>㈜열림데이터시스템 · DONGKUK SYSTEMS</span></div></header>
+
+  <section class="hero">
+    <h1>한 주의 업무를 한 곳에서</h1>
+    <p>네트워크부문과 ITOA 부문의 주간업무보고를 여러 사람이 함께 작성하고, 보고서(PPT · 엑셀)로 바로 출력하는 사내 웹 시스템입니다.</p>
+    <div class="chips"><span>사업장별 동시 작성</span><span>전체 현황 · 독촉 메일</span><span>PPT · 엑셀 출력</span><span>손글씨 서명</span><span>주간보고 점검</span><span>Wiki 검색</span><span>문의 및 제안</span></div>
+  </section>
+  <div class="notice">⚠ 이 페이지는 <b>소개와 사용자 매뉴얼</b>입니다. 실제 주간업무보고는 사내 서버에서 동작하므로 회사 네트워크에서 관리자에게 받은 접속 주소(예: <code>http://10.90.9.201:3000</code>)로 들어가세요.</div>
+
+  <h2 class="sec">주요 기능</h2>
+  <div class="grid">
+    <div class="card"><h3>네트워크부문 주간보고</h3><ul><li>DK GROUP 운영 업무 건수 · 변경/신규 업무 · 장애/이슈</li><li>담당 사업장만 작성, 전주 불러오기</li><li>미리보기 · 인쇄, 주간보고서 PPT, 월간 보고</li></ul></div>
+    <div class="card"><h3>ITOA 주간보고</h3><ul><li>사업장별 처리 실적 · 백신/방역 · 근무 현황</li><li>담당 · 팀장 손글씨 서명 → 자동 완료</li><li>통합 엑셀 (V3 현황 · 사업장 시트 · 색인)</li></ul></div>
+    <div class="card"><h3>관리</h3><ul><li>전체 현황과 미완 사업장 독촉 메일</li><li>사용자 · 부문 · 사업장 · 담당자 관리</li><li>보고서 확정, 자동 백업 · 복원</li></ul></div>
+    <div class="card"><h3>함께 쓰기</h3><ul><li>현재 접속자와 입력 중인 칸 표시</li><li>맞춤법 · 띄어쓰기 점검, Wiki 검색</li><li>문의 및 제안 게시판 (첨부 · 메일 알림)</li></ul></div>
+  </div>
+  <figure class="shot"><img src="img/manual/u-itoa-editor.png" alt="ITOA 주간보고 작성 화면"></figure>
+
+  <h2 class="sec" id="manual">사용자 매뉴얼</h2>
+  <div class="tabs"><button type="button" class="on" data-m="user">사용자용</button><button type="button" data-m="admin">관리자용</button></div>
+  <nav class="man-toc" id="man-toc"></nav>
+  <div id="man-body"></div>
+
+  <h2 class="sec">서버 실행 (관리자)</h2>
+  <div class="card">
+    <p style="margin-top:0">Node.js가 설치된 사내 PC에서 실행합니다. 데이터는 <code>data/</code> 폴더에 저장되며 저장소에는 올라가지 않습니다.</p>
+    <pre class="run">npm install
+node server.js          # http://localhost:3000 (다른 PC: http://이PC의IP:3000)
+install-autostart.bat   # PC 로그인 시 자동 실행 · 꺼지면 다시 켜기</pre>
+  </div>
+
+  <footer>© ㈜열림데이터시스템 · 주간업무보고</footer>
+</div>
+<script src="manual.js"></script>
+<script>
+  const $ = id => document.getElementById(id);
+  function show(kind) {
+    const list = MANUAL[kind];
+    document.querySelectorAll('.tabs button').forEach(b => b.classList.toggle('on', b.dataset.m === kind));
+    $('man-toc').innerHTML = list.map(([id, title]) => `<a href="#man-${id}">${title}</a>`).join('');
+    $('man-body').innerHTML = list.map(([id, title, body]) => `<section class="man-sec" id="man-${id}"><h3>${title}</h3>${body}</section>`).join('');
+  }
+  document.querySelector('.tabs').addEventListener('click', e => { const b = e.target.closest('[data-m]'); if (b) show(b.dataset.m); });
+  // 목차: <base> 때문에 #링크가 public/ 으로 가지 않도록 직접 이동
+  $('man-toc').addEventListener('click', e => { const a = e.target.closest('a'); if (!a) return; e.preventDefault(); document.querySelector(a.getAttribute('href'))?.scrollIntoView({ behavior: 'smooth' }); });
+  $('man-body').addEventListener('click', e => { if (e.target.matches('.man-fig img')) window.open(e.target.src, '_blank'); });
+  show('user');
+</script>
+</body>
+</html>
