@@ -46,6 +46,11 @@ function createAuth(dataDir) {
   const findLogin = id => { const e = normEmail(id); return users.find(u => u.email === e) || users.find(u => !u.email && u.empNo === String(id || '').trim()); };
   // 초기 비밀번호 = 메일 주소 @ 앞부분 (메일이 없는 기존 계정은 사번)
   const initialPw = u => u.email ? u.email.split('@')[0] : u.empNo;
+  // 인터넷에 공개하는 서버(RANDOM_INITIAL_PW=1): 새 계정 · 비밀번호 초기화 때 무작위 임시 비밀번호를 만들어 관리자에게 한 번만 보여 준다
+  const RANDOM_INITIAL = process.env.RANDOM_INITIAL_PW === '1';
+  const tempPw = () => crypto.randomBytes(12).toString('base64').replace(/[+/=]/g, '').slice(0, 10);
+  // 임시 비밀번호를 정하고 그 값을 돌려준다 (처음 로그인할 때 바꾸게 함)
+  function startPassword(u) { const pw = RANDOM_INITIAL ? tempPw() : initialPw(u); setPassword(u, pw, true); return pw; }
   // 부문: 정하지 않은 계정은 관리자 = 둘 다, 일반 = 네트워크부문
   const deptOf = u => u.dept || (u.role === 'admin' ? 'all' : 'net');
   const deptsOf = u => (deptOf(u) === 'all' ? ['net', 'itoa'] : [deptOf(u)]);
@@ -74,10 +79,10 @@ function createAuth(dataDir) {
   const cleanDept = v => (DEPTS.includes(v) ? v : 'net');
   function addUser(email, name, role, dept) {
     const u = { empNo: newId(), email: cleanEmail(email), name: cleanName(name), role: role === 'admin' ? 'admin' : 'user', dept: cleanDept(dept), active: true, created: Date.now() };
-    setPassword(u, initialPw(u), true);
+    const pw = startPassword(u);
     users.push(u);
     saveUsers();
-    return u;
+    return { user: u, tempPassword: RANDOM_INITIAL ? pw : null };
   }
 
   // ---- 세션 ----
@@ -103,7 +108,8 @@ function createAuth(dataDir) {
   const sessionUser = req => userOfToken(headerToken(req));
   // 이 브라우저의 마지막 로그인 사용자 (쿠키 기준)
   const cookieUser = req => userOfToken(parseCookie(req));
-  const cookie = (tok, maxAge) => `ow_sid=${tok}; HttpOnly; SameSite=Lax; Path=/; Max-Age=${maxAge}`;
+  // HTTPS 로만 접속하는 서버(COOKIE_SECURE=1)는 쿠키를 암호화된 연결에서만 보내게 한다
+  const cookie = (tok, maxAge) => `ow_sid=${tok}; HttpOnly; SameSite=Lax; Path=/; Max-Age=${maxAge}${process.env.COOKIE_SECURE === '1' ? '; Secure' : ''}`;
 
   // ---- 처리 함수 (server.js에서 호출) ----
   return {
@@ -113,7 +119,11 @@ function createAuth(dataDir) {
 
     setup(body) {
       if (users.length) fail('이미 관리자 계정이 있습니다.');
-      return addUser(body.email, body.name, 'admin');
+      // 첫 관리자는 설정 화면에서 바로 비밀번호를 바꾸므로 메일 주소 @ 앞부분으로 시작
+      const { user: u } = addUser(body.email, body.name, 'admin');
+      setPassword(u, initialPw(u), true);
+      saveUsers();
+      return u;
     },
 
     login(body) {
@@ -127,6 +137,9 @@ function createAuth(dataDir) {
         fails.set(id, { count: n, until: n >= LOCK_LIMIT ? Date.now() + LOCK_MS : 0 });
         fail(u && !u.active ? '사용이 중지된 계정입니다. 관리자에게 문의하세요.' : '메일 주소 또는 비밀번호가 올바르지 않습니다.');
       }
+      // 공개 서버에서는 추측하기 쉬운 예전 초기 비밀번호(메일 주소 @ 앞부분)로 로그인할 수 없다
+      // (처음 만든 관리자 한 명뿐일 때는 설정 화면 흐름을 위해 허용)
+      if (RANDOM_INITIAL && u.mustChange && users.length > 1 && String(body.password) === initialPw(u)) fail('보안을 위해 예전 초기 비밀번호로는 로그인할 수 없습니다. 관리자에게 비밀번호 초기화를 요청하세요.');
       fails.delete(id);
       u.lastLogin = Date.now();
       saveUsers();
@@ -166,6 +179,7 @@ function createAuth(dataDir) {
 
     list: () => users.map(pub),
     deptsOf,
+    randomInitial: RANDOM_INITIAL,
 
     // 본인 또는 관리자만. dataUrl 이 비어 있으면 사진 삭제
     setAvatar(me, empNo, dataUrl) {
@@ -195,11 +209,12 @@ function createAuth(dataDir) {
     // 관리자 전용 사용자 관리
     admin(me, body) {
       if (body.action === 'add') return addUser(body.email, body.name, body.role, body.dept);
+      let tempPassword = null;
       const u = find(body.empNo) || fail('사용자를 찾을 수 없습니다.');
       const self = u.empNo === me.empNo;
       switch (body.action) {
         case 'rename': u.name = cleanName(body.name); break;
-        case 'reset': setPassword(u, initialPw(u), true); break;
+        case 'reset': { const pw = startPassword(u); if (RANDOM_INITIAL) tempPassword = pw; break; }
         // 메일 주소 등록·변경 (기존 사번 계정은 이걸로 메일 로그인으로 바뀐다)
         case 'email': u.email = cleanEmail(body.email, u.empNo); break;
         case 'role':
@@ -220,7 +235,7 @@ function createAuth(dataDir) {
         default: fail('알 수 없는 작업');
       }
       saveUsers(); saveSessions();
-      return u;
+      return { user: u, tempPassword };
     },
   };
 }

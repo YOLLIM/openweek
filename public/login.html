@@ -152,7 +152,7 @@
           <div class="fld"><svg class="i"><use href="#i-lock"/></svg><input id="l-pw" type="password" name="password" autocomplete="current-password" placeholder="비밀번호" required><button type="button" class="eye" title="비밀번호 보기"><svg class="i"><use href="#i-eye"/></svg></button></div>
           <div class="err" id="l-err"></div>
           <button class="btn" type="submit"><svg class="i"><use href="#i-login"/></svg>로그인</button>
-          <div class="note">처음 로그인할 때 비밀번호는 메일 주소의 @ 앞부분입니다.<br>메일 주소 또는 비밀번호를 잊으셨다면 관리자에게 문의하세요.</div>
+          <div class="note" id="l-note">처음 로그인할 때 비밀번호는 메일 주소의 @ 앞부분입니다.<br>메일 주소 또는 비밀번호를 잊으셨다면 관리자에게 문의하세요.</div>
         </div>
       </form>
 
@@ -283,6 +283,12 @@ $('f-setup').onsubmit = async e => {
     $('st-reports').textContent = info.stats.reports;
     $('st-sites').textContent = info.stats.sites;
     $('st-groups').textContent = info.stats.groups;
+    // 공개 서버: 초기 비밀번호는 관리자에게 받은 임시 비밀번호
+    if (info.randomInitialPw) {
+      $('l-note').innerHTML = '처음 로그인할 때는 관리자에게 받은 <b>임시 비밀번호</b>를 입력하세요.<br>메일 주소 또는 비밀번호를 잊으셨다면 관리자에게 문의하세요.';
+      $('c-sub').textContent = '처음 로그인하셨습니다. 임시 비밀번호를 새 비밀번호로 변경한 뒤 사용할 수 있습니다.';
+      $('c-cur').placeholder = '현재 비밀번호 (받은 임시 비밀번호)';
+    }
     if (info.needSetup) return step('setup');
     if (info.user && !info.user.mustChange) return goApp();
     if (info.user) return step('change');

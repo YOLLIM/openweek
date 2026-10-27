@@ -120,6 +120,10 @@ const body = async req => JSON.parse((await readBody(req)) || '{}');
 const server = http.createServer(async (req, res) => {
   const url = new URL(req.url, 'http://localhost');
   const P = url.pathname, M = req.method;
+  // 기본 보안 헤더: 형식 추측 금지 · 다른 사이트 안에 넣기 금지 · 주소 전달 최소화
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+  res.setHeader('Referrer-Policy', 'same-origin');
   try {
     const user = auth.sessionUser(req);
 
@@ -129,6 +133,7 @@ const server = http.createServer(async (req, res) => {
       const bu = !user && auth.cookieUser(req);
       return sendJSON(res, 200, {
         needSetup: auth.needSetup(),
+        randomInitialPw: auth.randomInitial,
         user: auth.pub(user),
         browserUser: bu ? { empNo: bu.empNo, email: bu.email || '', name: bu.name } : null,
         stats: { reports: state.db.reports.length, sites: state.db.sites.filter(x => x.active).length, groups: state.db.groups.length },
@@ -201,8 +206,9 @@ const server = http.createServer(async (req, res) => {
     }
     if (P === '/api/users') {
       if (user.role !== 'admin') return sendJSON(res, 403, { error: '관리자만 사용할 수 있습니다.' });
-      if (M === 'POST') auth.admin(user, await body(req));
-      return sendJSON(res, 200, { users: auth.list() });
+      // 공개 서버: 새 계정 · 비밀번호 초기화 때 만든 임시 비밀번호를 관리자에게 한 번만 돌려준다
+      const out = M === 'POST' ? auth.admin(user, await body(req)) : null;
+      return sendJSON(res, 200, { users: auth.list(), tempPassword: out?.tempPassword || null });
     }
     if (P === '/api/presence' && M === 'POST') {
       const p = await body(req);
@@ -415,7 +421,8 @@ const server = http.createServer(async (req, res) => {
   }
 });
 
-server.listen(PORT, '0.0.0.0', () => {
+// HOST: 인터넷 서버에서는 127.0.0.1 로 두고 앞의 HTTPS 프록시(Caddy)만 접속하게 한다
+server.listen(PORT, process.env.HOST || '0.0.0.0', () => {
   console.log('주간업무보고 서버 실행 중');
   console.log(`  이 PC:      http://localhost:${PORT}`);
   for (const list of Object.values(os.networkInterfaces()))

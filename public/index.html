@@ -854,7 +854,7 @@
     <section class="view hidden" id="view-users">
       <div class="card" style="margin-top:16px">
         <h2>사용자 추가</h2>
-        <div class="muted" style="margin-bottom:12px">로그인은 메일 주소로 합니다. 초기 비밀번호는 메일 주소의 @ 앞부분이며(예: hong@dongkuk.com → hong), 처음 로그인할 때 변경하게 됩니다.</div>
+        <div class="muted" style="margin-bottom:12px" id="us-help">로그인은 메일 주소로 합니다. 초기 비밀번호는 메일 주소의 @ 앞부분이며(예: hong@dongkuk.com → hong), 처음 로그인할 때 변경하게 됩니다.</div>
         <label class="field">메일 주소 <input id="us-email" type="email" placeholder="예: hong@dongkuk.com" autocomplete="off" style="width:240px"></label>
         <label class="field">이름 <input id="us-name" placeholder="예: 홍길동"></label>
         <label class="field">부문 <select id="us-dept"><option value="net">네트워크부문</option><option value="itoa">ITOA</option><option value="all">둘 다</option></select></label>
@@ -3167,7 +3167,11 @@ async function userApi(body) {
   if (!res.ok) throw new Error(j.error);
   usersCache = j.users;
   drawUsers();
+  return j;
 }
+// 공개 서버(임시 비밀번호 모드): 시작할 때 /api/auth/info 의 randomInitialPw
+let randomInitialPw = false;
+const showTempPw = (who, pw) => pw && prompt(`${who}의 임시 비밀번호입니다. 지금 한 번만 보여 드리니 복사해서 전달하세요.\n(처음 로그인할 때 새 비밀번호로 바꾸게 됩니다)`, pw);
 function renderUsers() {
   drawUsers();
   userApi().catch(e => alert(e.message));
@@ -3204,11 +3208,11 @@ $('us-table').addEventListener('click', async e => {
     body.email = m;
   }
   if (act === 'rename') { const n = prompt('이름', u.name)?.trim(); if (!n) return; body.name = n; }
-  if (act === 'reset' && !confirm(`${label}의 비밀번호를 초기 비밀번호(${u.email ? '메일 주소 @ 앞부분: ' + u.email.split('@')[0] : '예전 사번'})로 초기화할까요?`)) return;
+  if (act === 'reset' && !confirm(randomInitialPw ? `${label}의 비밀번호를 새 임시 비밀번호로 초기화할까요?\n(임시 비밀번호는 다음 창에서 한 번만 보여 드립니다)` : `${label}의 비밀번호를 초기 비밀번호(${u.email ? '메일 주소 @ 앞부분: ' + u.email.split('@')[0] : '예전 사번'})로 초기화할까요?`)) return;
   if (act === 'role') body.role = u.role === 'admin' ? 'user' : 'admin';
   if (act === 'active') body.value = !u.active;
   if (act === 'delete' && !confirm(`${label} 사용자를 삭제할까요?`)) return;
-  try { await userApi(body); } catch (err) { alert(err.message); }
+  try { const j = await userApi(body); if (act === 'reset') showTempPw(label, j.tempPassword); } catch (err) { alert(err.message); }
 });
 $('us-table').addEventListener('change', async e => {
   const emp = e.target.dataset.udept;
@@ -3217,20 +3221,23 @@ $('us-table').addEventListener('change', async e => {
 });
 $('us-add').onclick = async () => {
   try {
-    await userApi({ action: 'add', email: $('us-email').value.trim(), name: $('us-name').value.trim(), role: $('us-role').value, dept: $('us-dept').value });
+    const j = await userApi({ action: 'add', email: $('us-email').value.trim(), name: $('us-name').value.trim(), role: $('us-role').value, dept: $('us-dept').value });
+    showTempPw(`${$('us-name').value.trim()}(${$('us-email').value.trim()})`, j.tempPassword);
     $('us-email').value = ''; $('us-name').value = ''; $('us-email').focus();
   } catch (err) { alert(err.message); }
 };
 $('us-bulk-add').onclick = async () => {
   const lines = $('us-bulk').value.split('\n').map(l => l.trim()).filter(Boolean);
-  const errs = [];
+  const errs = [], temps = [];
   let ok = 0;
   for (const l of lines) {
     const [email, name] = l.split(/[,\t]/).map(x => (x || '').trim());
-    try { await userApi({ action: 'add', email, name, dept: $('us-dept').value }); ok++; } catch (err) { errs.push(`${l} → ${err.message}`); }
+    try { const j = await userApi({ action: 'add', email, name, dept: $('us-dept').value }); ok++; if (j.tempPassword) temps.push(`${email}\t${j.tempPassword}`); } catch (err) { errs.push(`${l} → ${err.message}`); }
   }
   if (!errs.length) $('us-bulk').value = '';
   alert(`${ok}명 추가했습니다.` + (errs.length ? `\n\n추가하지 못한 줄:\n${errs.join('\n')}` : ''));
+  // 공개 서버: 임시 비밀번호 목록 (메일 주소 · 임시 비밀번호)
+  if (temps.length) prompt('추가한 사용자의 임시 비밀번호입니다 (메일 주소 · 비밀번호). 지금 한 번만 보여 드리니 복사해서 전달하세요.', temps.join(' / '));
 };
 
 function myField() {
@@ -3312,6 +3319,8 @@ window.addEventListener('pagehide', () => sendPresence(true));
   const info = await rawFetch('/api/auth/info', { cache: 'no-store' }).then(r => r.json()).catch(() => null);
   if (info && (!info.user || info.user.mustChange)) { if (!info.user) tabToken.set(''); location.href = '/login.html'; return; }
   me = info?.user || null;
+  randomInitialPw = !!info?.randomInitialPw;
+  if (randomInitialPw) $('us-help').textContent = '로그인은 메일 주소로 합니다. 사용자를 추가하거나 비밀번호를 초기화하면 무작위 임시 비밀번호가 한 번 표시되니 해당 사용자에게 전달하세요. 처음 로그인할 때 새 비밀번호로 바꾸게 됩니다.';
   await refresh(true);
   if (!db) { document.querySelector('main').innerHTML = '<div class="card" style="margin-top:20px">서버에 연결할 수 없습니다. 서버(node server.js)가 실행 중인지 확인하세요.</div>'; return; }
   setStatus('서버 연결됨');
