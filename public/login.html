@@ -1,0 +1,302 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>로그인 · 주간업무보고</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<style>
+  :root {
+    --ink: #1b1f27;
+    --muted: #6b7280;
+    --field: #e9f0fb;
+    --field-line: #c9d6ea;
+    --teal: #16756f;
+    --navy: #1d3b6e;
+    --danger: #c0392b;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; }
+  body {
+    font-family: "Pretendard Variable", Pretendard, "Malgun Gothic", "맑은 고딕", sans-serif; color: var(--ink);
+    background:
+      radial-gradient(900px 600px at -5% -10%, #c9e0d8 0%, transparent 60%),
+      radial-gradient(800px 700px at 105% 15%, #f1d6c2 0%, transparent 60%),
+      radial-gradient(700px 500px at 60% 110%, #e7ddd0 0%, transparent 65%),
+      #f5efe7;
+    min-height: 100vh;
+  }
+  svg.i { width: 18px; height: 18px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0; }
+  .wrap { display: grid; grid-template-columns: minmax(420px, 576px) 1fr; gap: 40px; min-height: 100vh; padding: 36px 40px 36px 9%; }
+
+  /* 왼쪽 소개 카드 */
+  .hero { position: relative; overflow: hidden; border-radius: 34px; color: #fff; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 60px 40px;
+    background: radial-gradient(500px 400px at 50% 30%, #262b36 0%, transparent 70%), radial-gradient(400px 300px at 70% 95%, #22263a 0%, transparent 70%), #181b22; box-shadow: 0 30px 60px rgba(20,22,30,.25); }
+  .logo-tile { background: #fff; border-radius: 20px; padding: 18px 22px; box-shadow: 0 10px 30px rgba(0,0,0,.35), 0 0 0 6px rgba(255,255,255,.06); }
+  .logo-tile img { height: 38px; display: block; }
+  .pill { margin-top: 34px; display: inline-flex; align-items: center; gap: 7px; font-size: 13px; font-weight: 700; padding: 8px 15px; border-radius: 999px; background: #2b303b; border: 1px solid #3a404c; }
+  .pill svg { color: #f59e0b; width: 15px; height: 15px; }
+  .hero h1 { font-size: 50px; line-height: 1.15; letter-spacing: -2px; margin: 20px 0 18px; font-weight: 800; }
+  .hero p { color: #c9ced8; font-size: 15px; line-height: 1.85; margin: 0; }
+  .tiles { display: flex; gap: 14px; margin-top: 44px; }
+  .tile { width: 96px; padding: 16px 0 14px; border-radius: 16px; background: #2a2f3a; border: 1px solid #3a404c; }
+  .tile b { display: block; font-size: 22px; letter-spacing: -.5px; }
+  .tile span { font-size: 11px; color: #c4cad4; }
+  .chip { position: absolute; border-radius: 16px; background: rgba(42,47,58,.75); border: 1px solid #353b47; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #e5e7eb; }
+  .chip b { font-size: 21px; }
+  .chip small { font-size: 9px; letter-spacing: 1.5px; color: #9aa2ae; font-weight: 700; margin-top: 3px; }
+  .dot-ic { position: absolute; width: 42px; height: 42px; border-radius: 12px; background: rgba(42,47,58,.75); border: 1px solid #353b47; display: flex; align-items: center; justify-content: center; }
+  .copy { position: absolute; bottom: 26px; left: 0; right: 0; font-size: 12px; color: #c9ced8; }
+
+  /* 떠다니는 아이콘: 위아래·좌우로 천천히, 아이콘마다 속도·시작 시점을 다르게 */
+  @keyframes floatA { 0%, 100% { transform: translate(0, 0); } 50% { transform: translate(0, -14px); } }
+  @keyframes floatB { 0%, 100% { transform: translate(0, 0) rotate(0deg); } 33% { transform: translate(8px, -10px) rotate(3deg); } 66% { transform: translate(-6px, 6px) rotate(-3deg); } }
+  @keyframes floatC { 0%, 100% { transform: translate(0, 0); } 25% { transform: translate(-8px, -6px); } 50% { transform: translate(0, -12px); } 75% { transform: translate(8px, -6px); } }
+  .chip, .dot-ic { will-change: transform; animation: floatA 6s ease-in-out infinite; }
+  .hero > :nth-child(1) { animation: floatA 6.5s ease-in-out infinite; }
+  .hero > :nth-child(2) { animation: floatC 8s ease-in-out -2s infinite; }
+  .hero > :nth-child(3) { animation: floatB 9s ease-in-out -4s infinite; }
+  .hero > :nth-child(4) { animation: floatB 7s ease-in-out -1s infinite; }
+  .hero > :nth-child(5) { animation: floatA 5.5s ease-in-out -3s infinite; }
+  .hero > :nth-child(6) { animation: floatC 7.5s ease-in-out -5s infinite; }
+  .hero > :nth-child(7) { animation: floatB 6s ease-in-out -2.5s infinite; }
+  .hero > :nth-child(8) { animation: floatA 8.5s ease-in-out -6s infinite; }
+  .logo-tile { animation: logoFloat 7s ease-in-out infinite; }
+  @keyframes logoFloat { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
+  @media (prefers-reduced-motion: reduce) { .chip, .dot-ic, .logo-tile { animation: none !important; } }
+
+  /* 오른쪽 로그인 */
+  .side { display: flex; align-items: center; justify-content: center; }
+  .box { width: 100%; max-width: 448px; }
+  .box h2 { font-size: 30px; letter-spacing: -1px; margin: 0 0 10px; font-weight: 800; }
+  .box .sub { color: #4b5563; font-size: 14px; margin: 0 0 34px; line-height: 1.6; }
+  .card { background: rgba(255,255,255,.72); backdrop-filter: blur(8px); border: 1px solid rgba(255,255,255,.9); border-radius: 26px; padding: 34px 32px 28px; box-shadow: 0 20px 50px rgba(120,90,60,.12); }
+  label { display: block; font-size: 13px; font-weight: 700; margin: 0 0 9px; }
+  .fld { display: flex; align-items: center; gap: 10px; background: var(--field); border: 1px solid var(--field-line); border-radius: 14px; padding: 0 16px; height: 56px; margin-bottom: 22px; color: #5b6472; }
+  .fld:focus-within { border-color: #5b8def; box-shadow: 0 0 0 3px #5b8def33; }
+  .fld input { flex: 1; border: 0; background: transparent; font: inherit; font-size: 15px; color: var(--ink); outline: none; min-width: 0; }
+  .fld button { border: 0; background: none; color: #5b6472; cursor: pointer; padding: 4px; display: flex; }
+  .btn { width: 100%; height: 50px; border: 0; border-radius: 999px; color: #fff; font: inherit; font-weight: 800; font-size: 15px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px;
+    background: linear-gradient(90deg, var(--teal), var(--navy)); box-shadow: 0 8px 20px rgba(22,80,100,.25); }
+  .btn:hover { filter: brightness(1.08); }
+  .btn:disabled { opacity: .6; cursor: default; }
+  /* 새 창: 이 브라우저의 마지막 로그인 계정으로 계속하기 */
+  .cont { margin-bottom: 22px; }
+  .cont .btn { background: #fff; color: var(--ink); border: 1.5px solid var(--field-line); box-shadow: none; }
+  .cont .btn:hover { background: var(--field); filter: none; }
+  .cont .or { display: flex; align-items: center; gap: 10px; color: var(--muted); font-size: 12px; margin-top: 18px; }
+  .cont .or::before, .cont .or::after { content: ""; flex: 1; height: 1px; background: var(--field-line); }
+  .note { text-align: center; font-size: 12px; color: var(--muted); margin-top: 20px; line-height: 1.6; }
+  .err { color: var(--danger); font-size: 13px; font-weight: 600; margin: -8px 0 14px; min-height: 18px; }
+  .link { background: none; border: 0; color: var(--teal); font: inherit; font-size: 12px; cursor: pointer; text-decoration: underline; }
+  .hidden { display: none !important; }
+
+  @media (max-width: 980px) {
+    .wrap { grid-template-columns: 1fr; padding: 24px 16px; }
+    .hero { display: none; }
+  }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute">
+  <symbol id="i-id" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="12" r="2.2"/><path d="M14 10h4M14 14h3"/></symbol>
+  <symbol id="i-lock" viewBox="0 0 24 24"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></symbol>
+  <symbol id="i-user" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></symbol>
+  <symbol id="i-eye" viewBox="0 0 24 24"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></symbol>
+  <symbol id="i-login" viewBox="0 0 24 24"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4M10 17l5-5-5-5M15 12H3"/></symbol>
+  <symbol id="i-spark" viewBox="0 0 24 24"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6 6l2.5 2.5M15.5 15.5 18 18M6 18l2.5-2.5M15.5 8.5 18 6"/></symbol>
+  <symbol id="i-gear" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/></symbol>
+  <symbol id="i-bolt" viewBox="0 0 24 24"><path d="M13 2 4 14h7l-1 8 9-12h-7Z"/></symbol>
+  <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></symbol>
+  <symbol id="i-chart" viewBox="0 0 24 24"><path d="M3 3v18h18M8 17V11M12 17V7M16 17v-4"/></symbol>
+  <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol>
+</svg>
+
+<div class="wrap">
+  <section class="hero">
+    <div class="chip" style="left:48px;top:62px;width:84px;height:84px"><b id="st-reports">–</b><small>REPORTS</small></div>
+    <div class="chip" style="right:60px;top:148px;width:76px;height:76px"><b id="st-sites">–</b><small>SITES</small></div>
+    <div class="chip" style="right:56px;bottom:76px;width:72px;height:72px"><b id="st-groups">–</b><small>GROUPS</small></div>
+    <div class="dot-ic" style="right:196px;top:56px;color:#c4cad4"><svg class="i"><use href="#i-gear"/></svg></div>
+    <div class="dot-ic" style="left:26px;top:272px;color:#f59e0b"><svg class="i"><use href="#i-bolt"/></svg></div>
+    <div class="dot-ic" style="right:34px;top:450px;color:#c4cad4"><svg class="i"><use href="#i-search"/></svg></div>
+    <div class="dot-ic" style="left:54px;bottom:208px;color:#ea7a1a"><svg class="i"><use href="#i-clock"/></svg></div>
+    <div class="dot-ic" style="left:186px;bottom:80px;color:#14a38b"><svg class="i"><use href="#i-chart"/></svg></div>
+
+    <div class="logo-tile"><img src="img/yollim-login.png" alt="YOLLIM"></div>
+    <div class="pill"><svg class="i"><use href="#i-spark"/></svg>Weekly Report System</div>
+    <h1>한 주의 업무를<br>한 곳에서</h1>
+    <p>작성, 검색, 보고서 출력을 하나의 흐름으로.<br>사업장별 업무를 함께 쓰고 바로 공유하세요.</p>
+    <div class="tiles">
+      <div class="tile"><b>작성</b><span>함께 쓰는 보고</span></div>
+      <div class="tile"><b>Wiki</b><span>전체 내용 검색</span></div>
+      <div class="tile"><b>PPT</b><span>보고서 출력</span></div>
+    </div>
+    <div class="copy">© <span id="year"></span> ㈜열림데이터시스템. All rights reserved.</div>
+  </section>
+
+  <section class="side">
+    <div class="box">
+      <!-- 로그인 -->
+      <form id="f-login" class="hidden" autocomplete="on">
+        <h2>다시 오신 것을 환영합니다</h2>
+        <p class="sub">메일 주소와 비밀번호로 로그인하세요.</p>
+        <div class="card">
+          <div class="cont hidden" id="l-cont">
+            <button type="button" class="btn" id="l-cont-btn"></button>
+            <div class="or">또는 다른 계정으로 로그인</div>
+          </div>
+          <label for="l-emp">메일 주소</label>
+          <div class="fld"><svg class="i"><use href="#i-id"/></svg><input id="l-emp" type="text" inputmode="email" name="username" autocomplete="username" placeholder="메일 주소를 입력하세요" required></div>
+          <label for="l-pw">비밀번호</label>
+          <div class="fld"><svg class="i"><use href="#i-lock"/></svg><input id="l-pw" type="password" name="password" autocomplete="current-password" placeholder="비밀번호" required><button type="button" class="eye" title="비밀번호 보기"><svg class="i"><use href="#i-eye"/></svg></button></div>
+          <div class="err" id="l-err"></div>
+          <button class="btn" type="submit"><svg class="i"><use href="#i-login"/></svg>로그인</button>
+          <div class="note">처음 로그인할 때 비밀번호는 메일 주소의 @ 앞부분입니다.<br>메일 주소 또는 비밀번호를 잊으셨다면 관리자에게 문의하세요.</div>
+        </div>
+      </form>
+
+      <!-- 비밀번호 변경 -->
+      <form id="f-change" class="hidden">
+        <h2>새 비밀번호 설정</h2>
+        <p class="sub" id="c-sub">처음 로그인하셨습니다. 초기 비밀번호(메일 주소 @ 앞부분)를 변경한 뒤 사용할 수 있습니다.</p>
+        <div class="card">
+          <div id="c-cur-wrap">
+            <label for="c-cur">현재 비밀번호</label>
+            <div class="fld"><svg class="i"><use href="#i-lock"/></svg><input id="c-cur" type="password" autocomplete="current-password" placeholder="현재 비밀번호 (초기값: 메일 주소 @ 앞부분)"></div>
+          </div>
+          <label for="c-new">새 비밀번호</label>
+          <div class="fld"><svg class="i"><use href="#i-lock"/></svg><input id="c-new" type="password" autocomplete="new-password" placeholder="6자 이상, 초기 비밀번호와 다르게" required><button type="button" class="eye" title="비밀번호 보기"><svg class="i"><use href="#i-eye"/></svg></button></div>
+          <label for="c-new2">새 비밀번호 확인</label>
+          <div class="fld"><svg class="i"><use href="#i-lock"/></svg><input id="c-new2" type="password" autocomplete="new-password" placeholder="한 번 더 입력" required></div>
+          <div class="err" id="c-err"></div>
+          <button class="btn" type="submit">비밀번호 변경 후 시작하기</button>
+          <div class="note"><button type="button" class="link" id="c-logout">다른 계정으로 로그인</button></div>
+        </div>
+      </form>
+
+      <!-- 최초 관리자 등록 -->
+      <form id="f-setup" class="hidden">
+        <h2>최초 관리자 등록</h2>
+        <p class="sub">등록된 사용자가 없습니다. 관리자 계정을 먼저 만드세요.<br>초기 비밀번호는 메일 주소의 @ 앞부분이며, 바로 변경하게 됩니다.</p>
+        <div class="card">
+          <label for="s-emp">메일 주소</label>
+          <div class="fld"><svg class="i"><use href="#i-id"/></svg><input id="s-emp" type="email" placeholder="관리자 메일 주소" required></div>
+          <label for="s-name">이름</label>
+          <div class="fld"><svg class="i"><use href="#i-user"/></svg><input id="s-name" placeholder="이름" required></div>
+          <div class="err" id="s-err"></div>
+          <button class="btn" type="submit">관리자 등록</button>
+        </div>
+      </form>
+    </div>
+  </section>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+$('year').textContent = new Date().getFullYear();
+let rememberedPw = '';
+
+// 창(탭)별 로그인 토큰 (메인 화면과 같은 방식)
+const tabToken = {
+  get() { try { return sessionStorage.getItem('ow_tok') || ''; } catch { return ''; } },
+  set(t) { try { t ? sessionStorage.setItem('ow_tok', t) : sessionStorage.removeItem('ow_tok'); } catch { /* 저장소 접근 불가 */ } },
+};
+async function api(path, data) {
+  const headers = { 'Content-Type': 'application/json', ...(tabToken.get() ? { 'X-OW-Session': tabToken.get() } : {}) };
+  const res = await fetch(path, data ? { method: 'POST', headers, body: JSON.stringify(data) } : { cache: 'no-store', headers });
+  const j = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(j.error || '서버 오류 (' + res.status + ')');
+  return j;
+}
+function step(name) {
+  ['login', 'change', 'setup'].forEach(n => $('f-' + n).classList.toggle('hidden', n !== name));
+  $('c-cur-wrap').classList.toggle('hidden', name !== 'change' || !!rememberedPw);
+  const first = { login: 'l-emp', change: rememberedPw ? 'c-new' : 'c-cur', setup: 's-emp' }[name];
+  setTimeout(() => $(first).focus(), 0);
+}
+const goApp = () => { location.href = '/' + location.hash; };
+function busy(form, on) { form.querySelector('.btn').disabled = on; }
+
+document.querySelectorAll('.eye').forEach(b => b.onclick = () => {
+  const inp = b.parentElement.querySelector('input');
+  inp.type = inp.type === 'password' ? 'text' : 'password';
+});
+
+$('f-login').onsubmit = async e => {
+  e.preventDefault();
+  $('l-err').textContent = '';
+  busy(e.target, true);
+  try {
+    const pw = $('l-pw').value;
+    const { user, token } = await api('/api/auth/login', { email: $('l-emp').value.trim(), password: pw });
+    tabToken.set(token);
+    if (user.mustChange) { rememberedPw = pw; step('change'); } else goApp();
+  } catch (err) { $('l-err').textContent = err.message; $('l-pw').select(); }
+  busy(e.target, false);
+};
+
+$('f-change').onsubmit = async e => {
+  e.preventDefault();
+  $('c-err').textContent = '';
+  const next = $('c-new').value;
+  if (next !== $('c-new2').value) { $('c-err').textContent = '새 비밀번호가 서로 다릅니다.'; return; }
+  busy(e.target, true);
+  try {
+    await api('/api/auth/password', { current: rememberedPw || $('c-cur').value, next });
+    goApp();
+  } catch (err) { $('c-err').textContent = err.message; }
+  busy(e.target, false);
+};
+$('c-logout').onclick = async () => { await api('/api/auth/logout', {}).catch(() => {}); tabToken.set(''); rememberedPw = ''; $('l-cont').classList.add('hidden'); step('login'); };
+
+// [○○○으로 계속하기]: 이 브라우저의 마지막 로그인 계정으로 이 창을 연다
+$('l-cont-btn').onclick = async () => {
+  $('l-err').textContent = '';
+  try {
+    const { user, token } = await api('/api/auth/fork', {});
+    tabToken.set(token);
+    if (user.mustChange) step('change'); else goApp();
+  } catch (err) { $('l-cont').classList.add('hidden'); $('l-err').textContent = err.message; }
+};
+
+$('f-setup').onsubmit = async e => {
+  e.preventDefault();
+  $('s-err').textContent = '';
+  busy(e.target, true);
+  try {
+    const email = $('s-emp').value.trim();
+    await api('/api/auth/setup', { email, name: $('s-name').value.trim() });
+    const initial = email.split('@')[0];
+    const { token } = await api('/api/auth/login', { email, password: initial });
+    tabToken.set(token);
+    rememberedPw = initial;
+    $('c-sub').textContent = '관리자 계정이 만들어졌습니다. 초기 비밀번호(메일 주소 @ 앞부분)를 변경하세요.';
+    step('change');
+  } catch (err) { $('s-err').textContent = err.message; }
+  busy(e.target, false);
+};
+
+(async () => {
+  try {
+    const info = await api('/api/auth/info');
+    $('st-reports').textContent = info.stats.reports;
+    $('st-sites').textContent = info.stats.sites;
+    $('st-groups').textContent = info.stats.groups;
+    if (info.needSetup) return step('setup');
+    if (info.user && !info.user.mustChange) return goApp();
+    if (info.user) return step('change');
+    if (info.browserUser) {
+      $('l-cont-btn').textContent = `${info.browserUser.name} 계정으로 계속하기`;
+      $('l-cont-btn').title = info.browserUser.email || '';
+      $('l-cont').classList.remove('hidden');
+    }
+    step('login');
+  } catch {
+    step('login');
+    $('l-err').textContent = '서버에 연결할 수 없습니다.';
+  }
+})();
+</script>
+</body>
+</html>
