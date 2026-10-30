@@ -49,7 +49,8 @@ git config --system --add safe.directory "$APP_DIR"
 cd "$APP_DIR"
 npm ci --omit=dev
 mkdir -p "$APP_DIR/data" "$BACKUP_DIR"
-chown -R "$SVC_USER:$SVC_USER" "$APP_DIR" "$BACKUP_DIR"
+chown -R "$SVC_USER:$SVC_USER" "$APP_DIR"
+chmod 750 "$BACKUP_DIR"
 
 echo "== 24시간 실행 (꺼지면 다시 켜짐)"
 cat > /etc/systemd/system/openweek.service <<EOF
