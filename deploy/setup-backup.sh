@@ -50,6 +50,8 @@ tar -czf "$BACKUP_DIR/data-$(date +%Y%m%d).tgz" -C /opt/openweek data
 ls -la "$BACKUP_DIR"
 
 echo "== 매일 백업 예약 확인"
+command -v cron >/dev/null || { apt-get update -y && apt-get install -y cron; }
+systemctl enable --now cron
 systemctl is-active cron
 cat /etc/cron.d/openweek-backup
 

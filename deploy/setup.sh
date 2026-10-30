@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# 주간업무보고 서버 설치 (Google Cloud e2-micro · Oracle Cloud 등 Ubuntu 22.04/24.04 서버)
+# 주간업무보고 서버 설치 (Google Cloud e2-micro · Oracle Cloud 등 Ubuntu · Debian 서버)
 #   sudo bash setup.sh [도메인]
 # 도메인을 주지 않으면 <공인IP>.sslip.io 주소를 써서 HTTPS 인증서를 자동으로 받는다.
 set -euo pipefail
@@ -20,7 +20,7 @@ echo "== 접속 주소: https://$DOMAIN  (공인 IP $IP)"
 echo "== 시간대 · 기본 도구"
 timedatectl set-timezone Asia/Seoul
 apt-get update -y
-apt-get install -y curl git ca-certificates gnupg debian-keyring debian-archive-keyring apt-transport-https
+apt-get install -y curl git cron ca-certificates gnupg debian-keyring debian-archive-keyring apt-transport-https
 
 echo "== 메모리 보조 (1GB 서버용 스왑 2GB)"
 if [ "$(swapon --noheadings | wc -l)" = 0 ] && [ "$(free -m | awk '/^Mem:/{print $2}')" -lt 2000 ]; then
