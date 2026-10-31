@@ -118,7 +118,9 @@ const redirect = (res, to) => { res.writeHead(302, { Location: to, 'Cache-Contro
 const body = async req => JSON.parse((await readBody(req)) || '{}');
 
 const server = http.createServer(async (req, res) => {
-  const url = new URL(req.url, 'http://localhost');
+  // 주소가 형식에 맞지 않는 요청(예: //)은 여기서 끊는다. 처리하지 않으면 서버 전체가 종료된다.
+  let url;
+  try { url = new URL(req.url, 'http://localhost'); } catch { res.writeHead(400); return res.end(); }
   const P = url.pathname, M = req.method;
   // 기본 보안 헤더: 형식 추측 금지 · 다른 사이트 안에 넣기 금지 · 주소 전달 최소화
   res.setHeader('X-Content-Type-Options', 'nosniff');
@@ -420,6 +422,9 @@ const server = http.createServer(async (req, res) => {
     sendJSON(res, 500, { error: e.message });
   }
 });
+
+// 요청 하나의 예상 못 한 오류로 모든 사용자의 접속이 끊기지 않도록 기록만 남긴다
+process.on('unhandledRejection', e => console.error('[처리되지 않은 오류]', e));
 
 // HOST: 인터넷 서버에서는 127.0.0.1 로 두고 앞의 HTTPS 프록시(Caddy)만 접속하게 한다
 server.listen(PORT, process.env.HOST || '0.0.0.0', () => {

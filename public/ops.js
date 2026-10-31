@@ -206,6 +206,8 @@
   const fromISO = s => { const [y, m, d] = s.split('-').map(Number); return new Date(y, m - 1, d); };
   const addDays = (s, n) => { const d = fromISO(s); d.setDate(d.getDate() + n); return toISO(d); };
   const isDate = s => typeof s === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(s);
+  // 새로 만드는 항목의 id: 화면이 만들어 보내는 값이라 영문 · 숫자 · _ · - 만 받는다 (HTML 속성과 주소에 그대로 쓰인다)
+  const isId = s => typeof s === 'string' && /^[\w-]{1,40}$/.test(s);
 
   function seed() {
     const g1 = uid(), g2 = uid(), g3 = uid();
@@ -279,6 +281,9 @@
     }
     // 사업장·회사 관리(담당자 지정 포함)는 관리자만
     if (/^(site|group)\./.test(op.type) && op.role !== 'admin') fail('사업장 관리는 관리자만 할 수 있습니다.');
+    // 보고서 삭제 · 보고일과 기간 변경 · 기본 정보 설정은 관리자만
+    if (['report.delete', 'report.date', 'report.period', 'settings.set'].includes(op.type) && op.role !== 'admin') fail('관리자만 할 수 있습니다.');
+    if (['report.create', 'itoa.create', 'group.add', 'site.add'].includes(op.type) && !isId(op.id)) fail('id 형식이 올바르지 않습니다.');
     // ITOA 부문: 담당자 지정·사업장 관리는 관리자만, 작성은 관리자·ITOA 담당자 (사업장 칸은 그 사업장 담당자도)
     const itoa = () => normalizeItoa(db).itoa;
     const irep = () => itoa().reports.find(x => x.id === op.id) || fail('ITOA 보고서를 찾을 수 없습니다. (다른 사용자가 삭제했을 수 있음)');
@@ -306,6 +311,7 @@
       case 'report.create': {
         if (!isDate(op.date)) fail('보고일이 올바르지 않습니다.');
         if (db.reports.some(r => r.date === op.date)) fail(`${op.date} 보고서가 이미 있습니다.`);
+        if (db.reports.some(r => r.id === op.id)) fail('이미 있는 보고서 id 입니다.');
         const r = { id: op.id, date: op.date, start: addDays(op.date, -7), end: addDays(op.date, -1), stats: {}, works: {}, issues: {} };
         touch(r); db.reports.push(r);
         break;
@@ -432,6 +438,7 @@
         // 주간 = 시작일 ~ 종료일(7일), 같은 종료일 보고서는 하나만
         if (!isDate(op.end)) fail('기간이 올바르지 않습니다.');
         if (itoa().reports.some(r => r.end === op.end)) fail('해당 주의 ITOA 보고서가 이미 있습니다.');
+        if (itoa().reports.some(r => r.id === op.id)) fail('이미 있는 보고서 id 입니다.');
         const prev = itoa().reports.slice().sort((a, b) => a.end.localeCompare(b.end)).pop();
         const r = { id: op.id, start: addDays(op.end, -6), end: op.end, site: prev?.site || '동국제강그룹 전체', manager: op.by || prev?.manager || '', sign: { ...(prev?.sign || {}) }, rows: {}, cnt: {}, v3s: {}, atts: {}, general: {}, special: {}, plans: {} };
         touch(r); itoa().reports.push(r);

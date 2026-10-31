@@ -659,7 +659,7 @@
         <a data-view="itoa-wiki" data-dept="itoa" class="off-dept"><svg class="i"><use href="#i-book"/></svg>주간보고 Wiki</a>
         <a data-view="itoa-sites" data-dept="itoa" id="menu-itoa-sites" class="off-dept hidden"><svg class="i"><use href="#i-building"/></svg>사업장 관리</a>
         <a data-view="board"><svg class="i"><use href="#i-chat"/></svg>문의 및 제안</a>
-        <a data-view="settings"><svg class="i"><use href="#i-gear"/></svg>설정</a>
+        <a data-view="settings" id="menu-settings" class="hidden"><svg class="i"><use href="#i-gear"/></svg>설정</a>
         <a data-view="users" id="menu-users" class="hidden"><svg class="i"><use href="#i-user"/></svg>사용자 관리</a>
         <div class="menu-group" id="menu-manual" role="button" tabindex="0"><svg class="i"><use href="#i-book"/></svg>사용자 매뉴얼<svg class="i chev"><use href="#i-right"/></svg></div>
         <div class="submenu hidden" id="manual-sub">
@@ -1441,7 +1441,8 @@ function applyLock(r) {
   $('ed-lockbar').classList.toggle('hidden', !locked);
   if (locked) $('ed-lockbar').innerHTML = `<svg class="i"><use href="#i-lock"/></svg>확정된 보고서입니다 (${esc(r.locked.by || '')} · ${new Date(r.locked.at).toLocaleString()}). 수정이 필요하면 관리자에게 확정 해제를 요청하세요.<span class="spacer"></span>`;
   document.querySelectorAll('#ed-body textarea, #ed-body input').forEach(el => { el.readOnly = locked; });
-  ['ed-date', 'ed-start', 'ed-end'].forEach(id => { $(id).disabled = locked; });
+  // 보고일 · 기간은 관리자만 바꾼다
+  ['ed-date', 'ed-start', 'ed-end'].forEach(id => { $(id).disabled = locked || me?.role !== 'admin'; });
   $('ed-lock').innerHTML = `<svg class="i"><use href="#i-lock"/></svg>${locked ? '확정 해제' : '보고서 확정'}`;
   // 확정·해제는 관리자만: 다른 사용자에게는 버튼을 보이지 않는다
   $('ed-lock').classList.toggle('hidden', me?.role !== 'admin');
@@ -1835,7 +1836,7 @@ function renderList() {
   const rows = sortedReports().reverse();
   $('ls-table').innerHTML = '<tr><th>주차</th><th>보고일</th><th>최종 수정</th><th></th></tr>' + (rows.length ? rows.map(r =>
     `<tr><td><b>${esc(weekLabel(r))}</b></td><td>${fmtFull(r.date)}</td><td>${new Date(r.updated).toLocaleString()}${r.updatedBy ? ' · ' + esc(r.updatedBy) : ''}</td>
-     <td style="text-align:right"><button class="sm" data-open="${r.id}">열기</button> <button class="sm" data-print="${r.id}">인쇄</button> <button class="sm danger" data-del="${r.id}">삭제</button></td></tr>`).join('')
+     <td style="text-align:right"><button class="sm" data-open="${esc(r.id)}">열기</button> <button class="sm" data-print="${esc(r.id)}">인쇄</button>${me?.role === 'admin' ? ` <button class="sm danger" data-del="${esc(r.id)}">삭제</button>` : ''}</td></tr>`).join('')
     : '<tr><td colspan="4" class="muted" style="text-align:center">보고서가 없습니다.</td></tr>');
 }
 $('ls-table').addEventListener('click', e => {
@@ -1948,7 +1949,7 @@ function renderWikiResults() {
     return `<div class="hit">
       <div class="hit-h"><span class="date">${fmtFull(h.r.date)}</span><span class="muted">${esc(itoa ? itoaWeek(h.r) : weekLabel(h.r))}</span>
         <span class="tag">${esc(h.gname)} ${esc(h.s.name)}</span><span class="tag k-${h.kind}">${KIND[h.kind]}</span>
-        <span style="flex:1"></span><button class="sm" data-goto="${h.r.id}" data-gkind="${h.kind}" data-gsid="${h.s.id}">보고서에서 열기</button></div>
+        <span style="flex:1"></span><button class="sm" data-goto="${esc(h.r.id)}" data-gkind="${h.kind}" data-gsid="${h.s.id}">보고서에서 열기</button></div>
       <div class="hit-body">${body}</div></div>`;
   }).join('') + (hits.length > LIMIT ? `<div class="muted">상위 ${LIMIT}건만 표시합니다. 검색어를 더 구체적으로 입력하세요.</div>` : '')
     || '<div class="card muted">검색 결과가 없습니다.</div>';
@@ -2801,7 +2802,7 @@ function renderItoaList() {
     const t = Ops.itoaTotals(r);
     return `<tr><td><b>${esc(itoaWeek(r).split(' (')[0])}</b></td><td>${fmtFull(r.start)} ~ ${fmtFull(r.end)}</td><td>완료 ${t.done} · 지연 ${t.late} · 적기 ${fmtRate(t.rate)}%</td>
      <td>${r.updated ? new Date(r.updated).toLocaleString() : ''}${r.updatedBy ? ' · ' + esc(r.updatedBy) : ''}</td>
-     <td style="text-align:right;white-space:nowrap"><button class="sm" data-iopen="${r.id}">열기</button> <button class="sm" data-iprint="${r.id}">인쇄</button>${can ? ` <button class="sm danger" data-idel="${r.id}">삭제</button>` : ''}</td></tr>`;
+     <td style="text-align:right;white-space:nowrap"><button class="sm" data-iopen="${esc(r.id)}">열기</button> <button class="sm" data-iprint="${esc(r.id)}">인쇄</button>${can ? ` <button class="sm danger" data-idel="${esc(r.id)}">삭제</button>` : ''}</td></tr>`;
   }).join('') : '<tr><td colspan="5" class="muted" style="text-align:center">ITOA 보고서가 없습니다.</td></tr>');
 }
 $('itl-table').addEventListener('click', e => {
@@ -3041,7 +3042,7 @@ $('menu-manual').onkeydown = e => { if (e.key === 'Enter' || e.key === ' ') { e.
 const RENDER = { editor: renderEditor, status: renderStatus, monthly: renderMonthly, list: renderList, wiki: renderWiki, sites: renderSites, settings: renderSettings, users: renderUsers, preview: renderPreview, itoa: renderItoa, 'itoa-list': renderItoaList, 'itoa-preview': renderItoaPreview, 'itoa-sites': renderSites, 'itoa-status': renderItoaStatus, 'itoa-wiki': renderWiki, 'manual-user': renderManual, 'manual-admin': renderManual, board: renderBoard };
 function show(v) {
   // 관리자 전용 화면
-  if (['sites', 'users', 'itoa-sites', 'itoa-status'].includes(v) && me && me.role !== 'admin') v = v.startsWith('itoa') ? 'itoa' : 'editor';
+  if (['sites', 'users', 'settings', 'itoa-sites', 'itoa-status'].includes(v) && me && me.role !== 'admin') v = v.startsWith('itoa') ? 'itoa' : 'editor';
   if (v === 'manual-admin' && me && me.role !== 'admin') v = 'manual-user';
   // 내 부문이 아닌 화면이면 내 부문 첫 화면으로
   const vDept = ITOA_VIEWS.includes(v) ? 'itoa' : COMMON_VIEWS.includes(v) ? null : 'net';
@@ -3100,6 +3101,7 @@ function setMe() {
   $('me-role').textContent = `${me.email || '메일 미등록'} · ${me.role === 'admin' ? '관리자' : '사용자'}`;
   $('me-av').innerHTML = avatar(me);
   $('menu-users').classList.toggle('hidden', me.role !== 'admin');
+  $('menu-settings').classList.toggle('hidden', me.role !== 'admin');
   $('menu-sites').classList.toggle('hidden', me.role !== 'admin');
   $('menu-itoa-sites').classList.toggle('hidden', me.role !== 'admin');
   $('menu-itoa-status').classList.toggle('hidden', me.role !== 'admin');
