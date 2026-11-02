@@ -67,7 +67,7 @@
     <p>네트워크부문과 ITOA 부문의 주간업무보고를 여러 사람이 함께 작성하고, 보고서(PPT · 엑셀)로 바로 출력하는 사내 웹 시스템입니다.</p>
     <div class="chips"><span>사업장별 동시 작성</span><span>전체 현황 · 독촉 메일</span><span>PPT · 엑셀 출력</span><span>손글씨 서명</span><span>주간보고 점검</span><span>Wiki 검색</span><span>문의 및 제안</span></div>
   </section>
-  <div class="notice">⚠ 이 페이지는 <b>소개와 사용자 매뉴얼</b>입니다. 실제 주간업무보고는 사내 서버에서 동작하므로 회사 네트워크에서 관리자에게 받은 접속 주소(예: <code>http://10.90.9.201:3000</code>)로 들어가세요.</div>
+  <div class="notice">⚠ 이 페이지는 <b>소개와 사용자 매뉴얼</b>입니다. 실제 주간업무보고는 별도 서버에서 동작하므로 관리자에게 받은 접속 주소로 들어가세요.</div>
 
   <h2 class="sec">주요 기능</h2>
   <div class="grid">
@@ -85,7 +85,7 @@
 
   <h2 class="sec">서버 실행 (관리자)</h2>
   <div class="card">
-    <p style="margin-top:0">Node.js가 설치된 사내 PC에서 실행합니다. 데이터는 <code>data/</code> 폴더에 저장되며 저장소에는 올라가지 않습니다.</p>
+    <p style="margin-top:0">운영 서버 설치와 업데이트는 저장소의 <code>deploy/README.md</code>를 보세요. 아래는 PC에서 직접 실행하는 방법입니다. 데이터는 <code>data/</code> 폴더에 저장되며 저장소에는 올라가지 않습니다.</p>
     <pre class="run">npm install
 node server.js          # http://localhost:3000 (다른 PC: http://이PC의IP:3000)
 install-autostart.bat   # PC 로그인 시 자동 실행 · 꺼지면 다시 켜기</pre>

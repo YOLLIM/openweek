@@ -19,6 +19,7 @@ const DATA_DIR = process.env.DATA_DIR ? path.resolve(process.env.DATA_DIR) : pat
 const BACKUP_DIR = path.join(DATA_DIR, 'backup');
 const DB_FILE = path.join(DATA_DIR, 'db.json');
 const MAX_BODY = 20 * 1024 * 1024;
+const MAX_LOGIN_BODY = 64 * 1024;   // 로그인 전에 받는 요청은 작게 제한한다
 
 fs.mkdirSync(BACKUP_DIR, { recursive: true });
 const auth = createAuth(DATA_DIR);
@@ -60,13 +61,13 @@ function sendJSON(res, code, obj, headers = {}) {
   res.end(JSON.stringify(obj));
 }
 
-function readBody(req) {
+function readBody(req, max = MAX_BODY) {
   return new Promise((resolve, reject) => {
     let size = 0;
     const chunks = [];
     req.on('data', c => {
       size += c.length;
-      if (size > MAX_BODY) { reject(new Error('요청이 너무 큽니다.')); req.destroy(); return; }
+      if (size > max) { reject(new Error('요청이 너무 큽니다.')); req.destroy(); return; }
       chunks.push(c);
     });
     req.on('end', () => resolve(Buffer.concat(chunks).toString('utf8')));
@@ -115,7 +116,7 @@ const PPTX_TYPE = 'application/vnd.openxmlformats-officedocument.presentationml.
 const XLSX_TYPE = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
 
 const redirect = (res, to) => { res.writeHead(302, { Location: to, 'Cache-Control': 'no-store' }); res.end(); };
-const body = async req => JSON.parse((await readBody(req)) || '{}');
+const body = async (req, max) => JSON.parse((await readBody(req, max)) || '{}');
 
 const server = http.createServer(async (req, res) => {
   // 주소가 형식에 맞지 않는 요청(예: //)은 여기서 끊는다. 처리하지 않으면 서버 전체가 종료된다.
@@ -142,10 +143,10 @@ const server = http.createServer(async (req, res) => {
       });
     }
     if (P === '/api/auth/setup' && M === 'POST') {
-      return sendJSON(res, 200, { user: auth.pub(auth.setup(await body(req))) });
+      return sendJSON(res, 200, { user: auth.pub(auth.setup(await body(req, MAX_LOGIN_BODY))) });
     }
     if (P === '/api/auth/login' && M === 'POST') {
-      const { user: u, token, setCookie } = auth.login(await body(req));
+      const { user: u, token, setCookie } = auth.login(await body(req, MAX_LOGIN_BODY));
       return sendJSON(res, 200, { user: auth.pub(u), token }, { 'Set-Cookie': setCookie });
     }
     // 새 창에서 [○○○으로 계속하기]
@@ -159,7 +160,7 @@ const server = http.createServer(async (req, res) => {
     }
     if (P === '/api/auth/password' && M === 'POST') {
       if (!user) return sendJSON(res, 401, { error: '로그인이 필요합니다.' });
-      auth.changePassword(user, await body(req));
+      auth.changePassword(user, await body(req, MAX_LOGIN_BODY), req);
       return sendJSON(res, 200, { user: auth.pub(user) });
     }
 
@@ -172,7 +173,7 @@ const server = http.createServer(async (req, res) => {
     // ---- 이하 API는 로그인(비밀번호 변경 완료) 필요 ----
     // 창을 닫을 때 보내는 '나감' 신호는 창별 로그인 헤더를 실을 수 없어서 로그인 없이 받는다 (해당 창 번호만 지움)
     if (P === '/api/presence/leave' && M === 'POST') {
-      const cid = String((await body(req)).cid || '').slice(0, 40);
+      const cid = String((await body(req, MAX_LOGIN_BODY)).cid || '').slice(0, 40);
       if (cid) presence.delete(cid);
       res.writeHead(204); return res.end();
     }
@@ -233,7 +234,7 @@ const server = http.createServer(async (req, res) => {
       if (url.searchParams.get('v') === String(state.version)) return sendJSON(res, 200, { unchanged: true, version: state.version });
       const db = { ...state.db };
       if (!depts.includes('net')) db.reports = [];
-      if (!depts.includes('itoa')) db.itoa = { assignees: [], groups: [], sites: [], reports: [] };
+      db.itoa = depts.includes('itoa') ? Ops.itoaStateFor(state.db, user) : { assignees: [], groups: [], sites: [], reports: [] };
       return sendJSON(res, 200, { version: state.version, db });
     }
     if (P === '/api/op' && M === 'POST') {

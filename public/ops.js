@@ -171,6 +171,19 @@
     const mine = (db.itoa?.sites || []).filter(s => (s.assignees || []).includes(who.empNo));
     return itoaSitesView(db, r, mine, nameOf);
   }
+  // 서버가 사용자에게 보내는 ITOA 데이터: 관리자 · ITOA 담당자는 전체, 그 외에는 자기 담당 사업장 칸만
+  function itoaStateFor(db, who) {
+    const it = db.itoa;
+    if (!it || canEditItoa(db, who)) return it;
+    const ids = new Set((it.sites || []).filter(s => (s.assignees || []).includes(who.empNo)).map(s => s.id));
+    const pick = o => Object.fromEntries(Object.entries(o || {}).filter(([k]) => ids.has(k)));
+    const reports = (it.reports || []).map(r => {
+      const v = { ...r, rows: {}, sign: {}, signImg: {} };
+      ['cnt', 'v3s', 'atts', 'siteSign', 'done', 'reminded', ...ITOA_KINDS].forEach(k => { if (r[k]) v[k] = pick(r[k]); });
+      return v;
+    });
+    return { ...it, reports };
+  }
   // 주어진 사업장들의 내용만 담은 보고서 (사업장 칸 = 그 사업장 이름, 담당 = 그 사업장 담당자)
   function itoaSitesView(db, r, mine, nameOf = x => x) {
     const it = db.itoa || {};
@@ -207,7 +220,9 @@
   const addDays = (s, n) => { const d = fromISO(s); d.setDate(d.getDate() + n); return toISO(d); };
   const isDate = s => typeof s === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(s);
   // 새로 만드는 항목의 id: 화면이 만들어 보내는 값이라 영문 · 숫자 · _ · - 만 받는다 (HTML 속성과 주소에 그대로 쓰인다)
-  const isId = s => typeof s === 'string' && /^[\w-]{1,40}$/.test(s);
+  const isId = s => typeof s === 'string' && /^[\w-]{1,40}$/.test(s) && !['__proto__', 'constructor', 'prototype'].includes(s);
+  // 서명 이미지: PNG 파일 머리(크기 정보 포함)까지 있는 data URL 만 받는다
+  const isPng = s => typeof s === 'string' && s.length <= 200000 && /^data:image\/png;base64,iVBORw0KGgo[A-Za-z0-9+/=]{21,}$/.test(s);
 
   function seed() {
     const g1 = uid(), g2 = uid(), g3 = uid();
@@ -276,6 +291,7 @@
       if (r?.locked) fail('확정된 보고서는 수정할 수 없습니다. 관리자가 확정을 해제해야 합니다.');
     }
     // 사업장별 작성 권한: 관리자가 아니면 담당자로 지정된 사업장만 작성할 수 있다 (op.role·op.empNo 는 서버가 채움)
+    if (SITE_WRITE.includes(op.type) && !(typeof op.sid === 'string' && db.sites.some(s => s.id === op.sid.split(':')[0]))) fail('사업장을 찾을 수 없습니다.');
     if (SITE_WRITE.includes(op.type) && !canEditSite(db, op, op.sid)) {
       fail('담당 사업장만 작성할 수 있습니다. 담당자 지정은 관리자에게 요청하세요.');
     }
@@ -287,6 +303,8 @@
     // ITOA 부문: 담당자 지정·사업장 관리는 관리자만, 작성은 관리자·ITOA 담당자 (사업장 칸은 그 사업장 담당자도)
     const itoa = () => normalizeItoa(db).itoa;
     const irep = () => itoa().reports.find(x => x.id === op.id) || fail('ITOA 보고서를 찾을 수 없습니다. (다른 사용자가 삭제했을 수 있음)');
+    // 사업장 칸의 sid 는 있는 사업장이나 '_'(사업장 미지정)만 받는다 (배열 · __proto__ 같은 값으로 권한 확인을 건너뛰지 못하게)
+    if (['itoa.text', 'itoa.cnt', 'itoa.att', 'itoa.v3', 'itoa.ssign', 'itoa.done'].includes(op.type) && !(typeof op.sid === 'string' && (op.sid === '_' || itoa().sites.some(s => s.id === op.sid)))) fail('사업장을 찾을 수 없습니다.');
     if (/^itoa\.(assign|group\.|site\.)/.test(op.type) && op.role !== 'admin') fail('ITOA 담당자 지정과 사업장 관리는 관리자만 할 수 있습니다.');
     if (op.type === 'itoa.done' && op.role !== 'admin') fail('ITOA 전체 현황의 완료 표시는 관리자만 할 수 있습니다.');
     if (op.type === 'itoa.remind' && op.role !== 'admin') fail('독촉 메일은 관리자만 보낼 수 있습니다.');
@@ -468,7 +486,7 @@
         if (prev && prev.empNo !== op.empNo && op.role !== 'admin') fail(`${prev.by}님의 서명은 본인이나 관리자만 바꾸거나 지울 수 있습니다.`);
         if (!op.value) { if (r.signImg) delete r.signImg[op.slot]; }
         else {
-          if (typeof op.value !== 'string' || op.value.length > 200000 || !/^data:image\/png;base64,[A-Za-z0-9+/=]+$/.test(op.value)) fail('서명 이미지가 올바르지 않습니다.');
+          if (!isPng(op.value)) fail('서명 이미지가 올바르지 않습니다.');
           (r.signImg ||= {})[op.slot] = { img: op.value, by: op.by || '', empNo: op.empNo || '', at: op.ts || Date.now() };
         }
         touch(r);
@@ -492,7 +510,7 @@
         if (prev && prev.empNo !== op.empNo && op.role !== 'admin') fail(`${prev.by}님의 서명은 본인이나 관리자만 바꾸거나 지울 수 있습니다.`);
         if (!op.value) { if (r.siteSign?.[sid]) delete r.siteSign[sid][op.slot]; }
         else {
-          if (typeof op.value !== 'string' || op.value.length > 200000 || !/^data:image\/png;base64,[A-Za-z0-9+/=]+$/.test(op.value)) fail('서명 이미지가 올바르지 않습니다.');
+          if (!isPng(op.value)) fail('서명 이미지가 올바르지 않습니다.');
           ((r.siteSign ||= {})[sid] ||= {})[op.slot] = { img: op.value, by: op.by || '', empNo: op.empNo || '', at: op.ts || Date.now() };
         }
         // 담당 · 팀장 서명이 모두 있으면 전체 현황에서 자동 완료, 서명이 빠지면 자동 완료만 해제 (관리자가 표시한 완료는 유지)
@@ -568,7 +586,7 @@
     }
   }
 
-  const api = { COLS, KINDS, ITOA_ROWS, uid, toISO, addDays, seed, siteHasData, workParts, worksText, subKey, canEditSite, canEditItoa, canEditItoaSite, itoaSiteLabel, normalizeItoa, itoaLines, itoaAttRows, itoaAttTotal, itoaV3, itoaSiteMissing, itoaView, itoaSitesView, ITOA_KINDS, itoaRate, itoaRowSum, itoaRowText, itoaTotals, apply };
+  const api = { COLS, KINDS, ITOA_ROWS, uid, toISO, addDays, seed, siteHasData, workParts, worksText, subKey, canEditSite, canEditItoa, canEditItoaSite, itoaSiteLabel, normalizeItoa, itoaLines, itoaAttRows, itoaAttTotal, itoaV3, itoaSiteMissing, itoaView, itoaSitesView, itoaStateFor, ITOA_KINDS, itoaRate, itoaRowSum, itoaRowText, itoaTotals, apply };
   if (typeof module === 'object' && module.exports) module.exports = api;
   else root.Ops = api;
 })(this);

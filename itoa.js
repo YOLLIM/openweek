@@ -241,11 +241,15 @@ function drawSheet(wb, name, db, r) {
     area(`${c}${row}`, `${c}${row}`, sg ? '' : r.sign?.[k] || '', { size: 9, bold: true, color: BLUE });
     if (!sg) return;
     // 손글씨 서명: 칸(약 68×52px) 안에 비율을 지켜 가운데 배치
-    const buf = Buffer.from(sg.img.split(',')[1], 'base64');
-    const w = buf.readUInt32BE(16), h = buf.readUInt32BE(20), s = Math.min(64 / w, 50 / h);
-    const id = wb.addImage({ base64: sg.img, extension: 'png' });
-    const col = C.indexOf(c);
-    ws.addImage(id, { tl: { col: col + (1 - (w * s) / 68) / 2, row: row - 1 + (1 - (h * s) / 56) / 2 }, ext: { width: w * s, height: h * s } });
+    // 이미 저장된 서명이 깨져 있어도 보고서는 만들어지도록 그 서명만 건너뛴다
+    try {
+      const buf = Buffer.from(sg.img.split(',')[1], 'base64');
+      const w = buf.readUInt32BE(16), h = buf.readUInt32BE(20), s = Math.min(64 / w, 50 / h);
+      if (!(w > 0 && h > 0)) return;
+      const id = wb.addImage({ base64: sg.img, extension: 'png' });
+      const col = C.indexOf(c);
+      ws.addImage(id, { tl: { col: col + (1 - (w * s) / 68) / 2, row: row - 1 + (1 - (h * s) / 56) / 2 }, ext: { width: w * s, height: h * s } });
+    } catch (e) { console.error('[서명 이미지 건너뜀]', e.message); }
   });
   row++;
   ws.getRow(row).height = 22;

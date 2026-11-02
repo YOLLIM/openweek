@@ -24,6 +24,7 @@ function createAuth(dataDir) {
   let users = readJSON(USERS_FILE, []);
   let sessions = readJSON(SESS_FILE, {});
   const fails = new Map();   // 로그인 ID(메일) → { count, until }
+  const MAX_FAILS = 5000;     // 없는 메일로 계속 시도해도 메모리가 늘지 않게 한다
 
   const saveUsers = () => writeJSON(USERS_FILE, users);
   let sessTimer = null;
@@ -95,6 +96,11 @@ function createAuth(dataDir) {
     return m ? m[1] : null;
   }
   const headerToken = req => { const t = String(req.headers['x-ow-session'] || ''); return /^[a-f0-9]{64}$/.test(t) ? t : null; };
+  // 이 사용자의 로그인을 모두 끊는다 (keep 에 든 토큰은 남긴다)
+  function revokeSessions(empNo, keep = []) {
+    for (const [t, s] of Object.entries(sessions)) if (s.empNo === empNo && !keep.includes(t)) delete sessions[t];
+    saveSessions();
+  }
   const newSession = empNo => { const tok = crypto.randomBytes(32).toString('hex'); sessions[tok] = { empNo, seen: Date.now() }; saveSessions(); return tok; };
   function userOfToken(tok) {
     const s = tok && sessions[tok];
@@ -127,13 +133,14 @@ function createAuth(dataDir) {
     },
 
     login(body) {
-      const id = normEmail(body.email);
+      const id = normEmail(body.email).slice(0, 100);
       const f = fails.get(id);
       if (f && f.until > Date.now()) fail(`로그인 시도가 너무 많습니다. ${Math.ceil((f.until - Date.now()) / 60000)}분 후 다시 시도하세요.`);
       const u = findLogin(body.email);
       if (!u || !u.active || !checkPassword(u, body.password || '')) {
         // 잠금이 풀린 뒤에는 횟수를 새로 센다
         const n = (f && !(f.until && f.until <= Date.now()) ? f.count : 0) + 1;
+        if (!fails.has(id) && fails.size >= MAX_FAILS) fails.delete(fails.keys().next().value);
         fails.set(id, { count: n, until: n >= LOCK_LIMIT ? Date.now() + LOCK_MS : 0 });
         fail(u && !u.active ? '사용이 중지된 계정입니다. 관리자에게 문의하세요.' : '메일 주소 또는 비밀번호가 올바르지 않습니다.');
       }
@@ -168,13 +175,15 @@ function createAuth(dataDir) {
     cookieUser,
     userOfToken,
 
-    changePassword(u, body) {
+    // 비밀번호를 바꾸면 지금 쓰는 이 창 · 이 브라우저만 남기고 다른 곳의 로그인을 끊는다
+    changePassword(u, body, req) {
       if (!checkPassword(u, body.current || '')) fail('현재 비밀번호가 올바르지 않습니다.');
       const next = String(body.next || '');
       if (next.length < MIN_PW) fail(`새 비밀번호는 ${MIN_PW}자 이상이어야 합니다.`);
       if (next === initialPw(u) || next === u.empNo || (u.email && next === u.email)) fail('초기 비밀번호(메일 주소 @ 앞부분)와 같은 비밀번호는 사용할 수 없습니다.');
       setPassword(u, next, false);
       saveUsers();
+      revokeSessions(u.empNo, [headerToken(req), parseCookie(req)]);
     },
 
     list: () => users.map(pub),
@@ -214,7 +223,7 @@ function createAuth(dataDir) {
       const self = u.empNo === me.empNo;
       switch (body.action) {
         case 'rename': u.name = cleanName(body.name); break;
-        case 'reset': { const pw = startPassword(u); if (RANDOM_INITIAL) tempPassword = pw; break; }
+        case 'reset': { const pw = startPassword(u); if (RANDOM_INITIAL) tempPassword = pw; if (!self) revokeSessions(u.empNo); break; }
         // 메일 주소 등록·변경 (기존 사번 계정은 이걸로 메일 로그인으로 바뀐다)
         case 'email': u.email = cleanEmail(body.email, u.empNo); break;
         case 'role':
