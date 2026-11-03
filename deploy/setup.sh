@@ -64,8 +64,8 @@ WorkingDirectory=$APP_DIR
 ExecStart=/usr/bin/node server.js
 Restart=always
 RestartSec=3
-# 인터넷 공개용: HTTPS 프록시 뒤에서만 접속 · 무작위 임시 비밀번호 · HTTPS 전용 쿠키
-Environment=PORT=3000 HOST=127.0.0.1 RANDOM_INITIAL_PW=1 COOKIE_SECURE=1 TZ=Asia/Seoul NODE_ENV=production
+# 인터넷 공개용: HTTPS 프록시 뒤에서만 접속 · HTTPS 전용 쿠키 (무작위 임시 비밀번호를 쓰려면 RANDOM_INITIAL_PW=1 추가)
+Environment=PORT=3000 HOST=127.0.0.1 COOKIE_SECURE=1 TZ=Asia/Seoul NODE_ENV=production
 
 [Install]
 WantedBy=multi-user.target
