@@ -34,7 +34,7 @@ const sheetRank = n => { const i = SHEET_ORDER.indexOf(n); return i < 0 ? SHEET_
 // 시트 이름: 일반 사용자 = 주간보고_1021 (주간 마지막 날의 월 · 일 두 자리), 관리자 = 통합주간보고
 const sheetName = r => (r.mineOnly ? `주간보고_${r.end.slice(5, 7)}${r.end.slice(8, 10)}` : '통합주간보고');
 // 엑셀 시트 이름에 못 쓰는 글자 빼고 31자까지
-const sheetSafe = t => String(t).replace(/[\\/:*?[\]]/g, '').slice(0, 31);
+const sheetSafe = t => String(t).replace(/[\\/:*?[\]']/g, '').slice(0, 31) || '사업장';
 
 // extra: 뒤에 붙일 시트 [{ name, view }] (관리자 엑셀의 사업장별 시트)
 async function itoaXlsx(db, r, extra = []) {
@@ -42,13 +42,14 @@ async function itoaXlsx(db, r, extra = []) {
   drawSheet(wb, sheetName(r), db, r);
   // 통합 보고서 시트 탭: 빨강
   if (!r.mineOnly) wb.getWorksheet(sheetName(r)).properties.tabColor = { argb: 'FFFF0000' };
-  const used = new Set([sheetName(r)]);
+  const used = new Set([sheetName(r).toLowerCase(), '색인']);
   // 통합 보고서(관리자): 2번째 시트 = 사업장별 V3 백신 최신 업데이트 현황 (별첨 자료)
-  if (!r.mineOnly) { drawV3Sheet(wb, db, r); used.add('V3업데이트현황'); }
+  if (!r.mineOnly) { drawV3Sheet(wb, db, r); used.add('v3업데이트현황'); }
   for (const x of extra.slice().sort((a, b) => sheetRank(a.name) - sheetRank(b.name))) {
+    // 31자로 잘린 이름이 겹치면 꼬리표(2)(3)…를 잘린 이름 안쪽에 붙인다 (엑셀 시트 이름은 대소문자 구분 없음)
     let name = sheetSafe(x.name);
-    for (let i = 2; used.has(name); i++) name = sheetSafe(`${x.name}(${i})`);
-    used.add(name);
+    for (let i = 2; used.has(name.toLowerCase()); i++) { const tag = `(${i})`; name = sheetSafe(x.name).slice(0, 31 - tag.length) + tag; }
+    used.add(name.toLowerCase());
     drawSheet(wb, name, db, x.view);
   }
   // 마지막 시트: 요청 분야 · 처리 구분 색인
