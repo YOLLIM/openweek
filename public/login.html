@@ -88,6 +88,9 @@
   .cont .or::before, .cont .or::after { content: ""; flex: 1; height: 1px; background: var(--field-line); }
   .note { text-align: center; font-size: 12px; color: var(--muted); margin-top: 20px; line-height: 1.6; }
   .err { color: var(--danger); font-size: 13px; font-weight: 600; margin: -8px 0 14px; min-height: 18px; }
+  .opts { display: flex; gap: 22px; margin: -6px 0 18px; font-size: 13px; color: #4a5260; }
+  .opts label { display: inline-flex; align-items: center; gap: 7px; margin: 0; font-weight: 500; cursor: pointer; }
+  .opts input { width: 16px; height: 16px; margin: 0; accent-color: var(--teal); cursor: pointer; }
   .link { background: none; border: 0; color: var(--teal); font: inherit; font-size: 12px; cursor: pointer; text-decoration: underline; }
   .hidden { display: none !important; }
 
@@ -150,6 +153,10 @@
           <div class="fld"><svg class="i"><use href="#i-id"/></svg><input id="l-emp" type="text" inputmode="email" name="username" autocomplete="username" placeholder="메일 주소를 입력하세요" required></div>
           <label for="l-pw">비밀번호</label>
           <div class="fld"><svg class="i"><use href="#i-lock"/></svg><input id="l-pw" type="password" name="password" autocomplete="current-password" placeholder="비밀번호" required><button type="button" class="eye" title="비밀번호 보기"><svg class="i"><use href="#i-eye"/></svg></button></div>
+          <div class="opts">
+            <label><input type="checkbox" id="l-save-id">아이디 저장</label>
+            <label title="이 브라우저에서 30일 동안 다시 로그인하지 않아도 됩니다. 공용 PC에서는 체크하지 마세요."><input type="checkbox" id="l-auto">자동 로그인</label>
+          </div>
           <div class="err" id="l-err"></div>
           <button class="btn" type="submit"><svg class="i"><use href="#i-login"/></svg>로그인</button>
           <div class="note" id="l-note">처음 로그인할 때 비밀번호는 메일 주소의 @ 앞부분입니다.<br>메일 주소 또는 비밀번호를 잊으셨다면 관리자에게 문의하세요.</div>
@@ -196,6 +203,11 @@
 const $ = id => document.getElementById(id);
 $('year').textContent = new Date().getFullYear();
 let rememberedPw = '';
+// 아이디 저장 · 자동 로그인 선택은 이 브라우저에만 기억한다
+const pref = {
+  get(k) { try { return localStorage.getItem(k) || ''; } catch { return ''; } },
+  set(k, v) { try { v ? localStorage.setItem(k, v) : localStorage.removeItem(k); } catch { /* 저장소 접근 불가 */ } },
+};
 
 // 창(탭)별 로그인 토큰 (메인 화면과 같은 방식)
 const tabToken = {
@@ -212,7 +224,7 @@ async function api(path, data) {
 function step(name) {
   ['login', 'change', 'setup'].forEach(n => $('f-' + n).classList.toggle('hidden', n !== name));
   $('c-cur-wrap').classList.toggle('hidden', name !== 'change' || !!rememberedPw);
-  const first = { login: 'l-emp', change: rememberedPw ? 'c-new' : 'c-cur', setup: 's-emp' }[name];
+  const first = { login: $('l-emp').value ? 'l-pw' : 'l-emp', change: rememberedPw ? 'c-new' : 'c-cur', setup: 's-emp' }[name];
   setTimeout(() => $(first).focus(), 0);
 }
 const goApp = () => { location.href = '/' + location.hash; };
@@ -228,9 +240,11 @@ $('f-login').onsubmit = async e => {
   $('l-err').textContent = '';
   busy(e.target, true);
   try {
-    const pw = $('l-pw').value;
-    const { user, token } = await api('/api/auth/login', { email: $('l-emp').value.trim(), password: pw });
+    const pw = $('l-pw').value, email = $('l-emp').value.trim(), auto = $('l-auto').checked;
+    const { user, token } = await api('/api/auth/login', { email, password: pw, remember: auto });
     tabToken.set(token);
+    pref.set('ow_saved_id', $('l-save-id').checked ? email : '');
+    pref.set('ow_auto', auto ? '1' : '');
     if (user.mustChange) { rememberedPw = pw; step('change'); } else goApp();
   } catch (err) { $('l-err').textContent = err.message; $('l-pw').select(); }
   busy(e.target, false);
@@ -283,6 +297,9 @@ $('f-setup').onsubmit = async e => {
     $('st-reports').textContent = info.stats.reports;
     $('st-sites').textContent = info.stats.sites;
     $('st-groups').textContent = info.stats.groups;
+    const savedId = pref.get('ow_saved_id');
+    if (savedId) { $('l-emp').value = savedId; $('l-save-id').checked = true; }
+    $('l-auto').checked = !!pref.get('ow_auto');
     // 공개 서버: 초기 비밀번호는 관리자에게 받은 임시 비밀번호
     if (info.randomInitialPw) {
       $('l-note').innerHTML = '처음 로그인할 때는 관리자에게 받은 <b>임시 비밀번호</b>를 입력하세요.<br>메일 주소 또는 비밀번호를 잊으셨다면 관리자에게 문의하세요.';
@@ -292,6 +309,14 @@ $('f-setup').onsubmit = async e => {
     if (info.needSetup) return step('setup');
     if (info.user && !info.user.mustChange) return goApp();
     if (info.user) return step('change');
+    // 자동 로그인: 이 브라우저가 기억하는 계정으로 바로 들어간다 (로그아웃하면 기억이 지워져 멈춘다)
+    if (info.browserUser && pref.get('ow_auto')) {
+      try {
+        const { user, token } = await api('/api/auth/fork', {});
+        tabToken.set(token);
+        return user.mustChange ? step('change') : goApp();
+      } catch { /* 기억이 만료됨: 로그인 화면으로 */ }
+    }
     if (info.browserUser) {
       $('l-cont-btn').textContent = `${info.browserUser.name} 계정으로 계속하기`;
       $('l-cont-btn').title = info.browserUser.email || '';

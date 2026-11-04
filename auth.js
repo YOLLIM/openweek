@@ -5,6 +5,7 @@ const path = require('path');
 const crypto = require('crypto');
 
 const SESSION_TTL = 7 * 24 * 3600 * 1000;      // 마지막 사용 후 7일
+const LONG_TTL = 30 * 24 * 3600 * 1000;        // [자동 로그인] 쿠키: 마지막 사용 후 30일
 const LOCK_LIMIT = 5, LOCK_MS = 5 * 60 * 1000;  // 5회 실패 시 5분 잠금
 const MIN_PW = 6;
 
@@ -101,12 +102,12 @@ function createAuth(dataDir) {
     for (const [t, s] of Object.entries(sessions)) if (s.empNo === empNo && !keep.includes(t)) delete sessions[t];
     saveSessions();
   }
-  const newSession = empNo => { const tok = crypto.randomBytes(32).toString('hex'); sessions[tok] = { empNo, seen: Date.now() }; saveSessions(); return tok; };
+  const newSession = (empNo, long) => { const tok = crypto.randomBytes(32).toString('hex'); sessions[tok] = { empNo, seen: Date.now(), ...(long ? { long: true } : {}) }; saveSessions(); return tok; };
   function userOfToken(tok) {
     const s = tok && sessions[tok];
     if (!s) return null;
     const u = find(s.empNo);
-    if (!u || !u.active || Date.now() - s.seen > SESSION_TTL) { delete sessions[tok]; saveSessions(); return null; }
+    if (!u || !u.active || Date.now() - s.seen > (s.long ? LONG_TTL : SESSION_TTL)) { delete sessions[tok]; saveSessions(); return null; }
     if (Date.now() - s.seen > 60000) { s.seen = Date.now(); saveSessions(); }
     return u;
   }
@@ -150,8 +151,9 @@ function createAuth(dataDir) {
       fails.delete(id);
       u.lastLogin = Date.now();
       saveUsers();
-      // 창 토큰과 쿠키 토큰은 따로 발급한다
-      return { user: u, token: newSession(u.empNo), setCookie: cookie(newSession(u.empNo), SESSION_TTL / 1000) };
+      // 창 토큰과 쿠키 토큰은 따로 발급한다. [자동 로그인]을 고르면 쿠키를 30일 유지한다
+      const long = body.remember === true;
+      return { user: u, token: newSession(u.empNo), setCookie: cookie(newSession(u.empNo, long), (long ? LONG_TTL : SESSION_TTL) / 1000) };
     },
 
     // 이 창만 로그아웃. 쿠키가 같은 사람이면 [계속하기]에도 다시 뜨지 않도록 쿠키도 지운다.
