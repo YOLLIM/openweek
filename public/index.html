@@ -455,6 +455,30 @@
   .site-item:last-child { border-bottom: 0; }
   .site-item .nm { min-width: 120px; font-weight: 600; }
   .site-item.inactive .nm { color: #aaa; text-decoration: line-through; }
+  /* 접속 통계 (전산개발담당자) */
+  .sx-bar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin: 16px 0 12px; }
+  .sx-tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-bottom: 14px; }
+  .sx-tile { background: #fff; border: 1px solid var(--line-soft); border-radius: 10px; padding: 14px 16px; }
+  .sx-tile .n { font-size: 26px; font-weight: 800; line-height: 1.2; font-variant-numeric: tabular-nums; }
+  .sx-tile .l { font-size: 12px; color: var(--muted); margin-top: 2px; }
+  .sx-chart { display: flex; align-items: flex-end; gap: 2px; height: 160px; padding: 0 2px; border-bottom: 1px solid #c9ced6; }
+  .sx-col { flex: 1; display: flex; align-items: flex-end; height: 100%; min-width: 3px; position: relative; }
+  .sx-col i { display: block; width: 100%; background: var(--teal); border-radius: 4px 4px 0 0; }
+  .sx-col.we i { background: #6fa3a9; }
+  .sx-col:hover i { background: var(--teal-2); }
+  .sx-col .tip { display: none; position: absolute; bottom: calc(100% + 6px); left: 50%; transform: translateX(-50%); background: #1d2433; color: #fff; font-size: 12px; padding: 5px 8px; border-radius: 6px; white-space: nowrap; z-index: 5; pointer-events: none; }
+  .sx-col:first-child .tip, .sx-col:nth-child(2) .tip { left: 0; transform: none; }
+  .sx-col:last-child .tip, .sx-col:nth-last-child(2) .tip { left: auto; right: 0; transform: none; }
+  .sx-col:hover .tip { display: block; }
+  .sx-axis { display: flex; justify-content: space-between; font-size: 11px; color: var(--muted); margin-top: 6px; }
+  .sx-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .sx-hbar span.b { display: inline-block; height: 10px; background: var(--teal); border-radius: 0 4px 4px 0; vertical-align: middle; }
+  table.list.sx td, table.list.sx th { padding: 8px 10px; font-size: 13px; }
+  table.list.sx td.num, table.list.sx th.num { text-align: right; font-variant-numeric: tabular-nums; }
+  .sx-k { font-size: 11px; padding: 2px 7px; border-radius: 8px; background: #eef0f2; color: #444; white-space: nowrap; }
+  .sx-k.fail { background: #fbebeb; color: #b42318; }
+  .sx-k.login, .sx-k.auto, .sx-k.continue { background: #e7f3f3; color: var(--teal); }
+  @media (max-width: 900px) { .sx-grid { grid-template-columns: 1fr; } }
   .badge { font-size: 11px; padding: 2px 8px; border-radius: 10px; background: #eef0f2; color: #555; }
 
   /* Wiki */
@@ -629,6 +653,7 @@
   <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></symbol>
   <symbol id="i-check" viewBox="0 0 24 24"><path d="M9 11l3 3 8-8"/><path d="M20 12v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h9"/></symbol>
   <symbol id="i-user" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></symbol>
+  <symbol id="i-pulse" viewBox="0 0 24 24"><path d="M3 12h4l3-8 4 16 3-8h4"/></symbol>
 </svg>
 
 <div class="app">
@@ -661,6 +686,7 @@
         <a data-view="board"><svg class="i"><use href="#i-chat"/></svg>문의 및 제안</a>
         <a data-view="settings" id="menu-settings" class="hidden"><svg class="i"><use href="#i-gear"/></svg>설정</a>
         <a data-view="users" id="menu-users" class="hidden"><svg class="i"><use href="#i-user"/></svg>사용자 관리</a>
+        <a data-view="stats" id="menu-stats" class="hidden"><svg class="i"><use href="#i-pulse"/></svg>접속 통계</a>
         <div class="menu-group" id="menu-manual" role="button" tabindex="0"><svg class="i"><use href="#i-book"/></svg>사용자 매뉴얼<svg class="i chev"><use href="#i-right"/></svg></div>
         <div class="submenu hidden" id="manual-sub">
           <a data-view="manual-user" class="sub">사용자용</a>
@@ -868,6 +894,28 @@
         </details>
       </div>
       <div class="card"><table class="list" id="us-table"></table></div>
+    </section>
+
+    <!-- 접속 통계 (전산개발담당자만) -->
+    <section class="view hidden" id="view-stats">
+      <div class="sx-bar">
+        <label class="field" style="margin:0">기간 <select id="sx-days"><option value="7">최근 7일</option><option value="30" selected>최근 30일</option><option value="90">최근 90일</option><option value="365">최근 1년</option></select></label>
+        <button id="sx-reload">새로 고침</button>
+        <span class="muted" id="sx-asof"></span>
+      </div>
+      <div class="sx-tiles" id="sx-tiles"></div>
+      <div class="card"><h2>일별 접속 수 <span class="muted" style="font-weight:400">(막대에 마우스를 올리면 접속 수 · 방문자 수, 흐린 막대 = 주말)</span></h2><div id="sx-daily"></div>
+        <details style="margin-top:10px"><summary class="muted" style="cursor:pointer">표로 보기</summary><div id="sx-daily-table" style="max-height:300px;overflow:auto;margin-top:8px"></div></details></div>
+      <div class="card"><h2>사용자별 접속</h2><div style="overflow-x:auto"><table class="list sx" id="sx-users"></table></div></div>
+      <div class="sx-grid">
+        <div class="card"><h2>시간대별 접속</h2><div id="sx-hours"></div></div>
+        <div class="card"><h2>메뉴별 사용</h2><table class="list sx" id="sx-menus"></table></div>
+      </div>
+      <div class="sx-grid">
+        <div class="card"><h2>기기</h2><table class="list sx" id="sx-dev"></table></div>
+        <div class="card"><h2>브라우저</h2><table class="list sx" id="sx-br"></table></div>
+      </div>
+      <div class="card"><h2>최근 기록 <span class="muted" style="font-weight:400">(최근 200건)</span></h2><div style="overflow-x:auto;max-height:480px;overflow-y:auto"><table class="list sx" id="sx-log"></table></div></div>
     </section>
 
     <!-- 미리보기 -->
@@ -1196,7 +1244,7 @@ const reportSites = r => orderedSites(s => s.active || siteHasData(r, s.id));
 const sortedReports = () => db.reports.slice().sort((a, b) => a.date.localeCompare(b.date));
 
 // ---------- 공통 화면 요소 ----------
-const VIEW_TITLE = { editor: '주간보고 작성', status: '전체 현황', monthly: '월간 보고', list: '보고서 목록', wiki: '주간보고 Wiki', sites: '사업장 관리', settings: '설정', users: '사용자 관리', preview: '미리보기 / 인쇄', itoa: '주간보고 작성', 'itoa-list': '보고서 목록', 'itoa-preview': '미리보기 / 인쇄', 'itoa-sites': '사업장 관리', 'itoa-status': '전체 현황', 'itoa-wiki': '주간보고 Wiki', 'manual-user': '사용자 매뉴얼 · 사용자용', 'manual-admin': '사용자 매뉴얼 · 관리자용', board: '문의 및 제안' };
+const VIEW_TITLE = { editor: '주간보고 작성', status: '전체 현황', monthly: '월간 보고', list: '보고서 목록', wiki: '주간보고 Wiki', sites: '사업장 관리', settings: '설정', users: '사용자 관리', preview: '미리보기 / 인쇄', itoa: '주간보고 작성', 'itoa-list': '보고서 목록', 'itoa-preview': '미리보기 / 인쇄', 'itoa-sites': '사업장 관리', 'itoa-status': '전체 현황', 'itoa-wiki': '주간보고 Wiki', 'manual-user': '사용자 매뉴얼 · 사용자용', 'manual-admin': '사용자 매뉴얼 · 관리자용', board: '문의 및 제안', stats: '접속 통계' };
 function renderChrome() {
   const net = db.settings.dept || '';
   $('side-dept').textContent = `${net} · 주간보고`;
@@ -3015,7 +3063,7 @@ $('bd-detail').addEventListener('click', e => {
 
 // ---------- 사용자 매뉴얼 ----------
 // 부문과 관계없이 볼 수 있는 화면
-const COMMON_VIEWS = ['settings', 'users', 'manual-user', 'manual-admin', 'board'];
+const COMMON_VIEWS = ['settings', 'users', 'manual-user', 'manual-admin', 'board', 'stats'];
 function renderManual() {
   const adminMan = view === 'manual-admin', list = MANUAL[adminMan ? 'admin' : 'user'];
   $('man-title').textContent = adminMan ? '관리자용 매뉴얼' : '사용자용 매뉴얼';
@@ -3038,12 +3086,101 @@ function toggleManualMenu(open) {
 $('menu-manual').onclick = () => toggleManualMenu($('manual-sub').classList.contains('hidden'));
 $('menu-manual').onkeydown = e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); $('menu-manual').click(); } };
 
+// ---------- 접속 통계 (전산개발담당자만) ----------
+const SX_KIND = { login: '로그인', auto: '자동 로그인', continue: '계속하기', fail: '로그인 실패', logout: '로그아웃', visit: '접속', view: '메뉴 이동' };
+const SX_DEV = { pc: 'PC', mobile: '모바일', tablet: '태블릿' };
+let sxData = null;
+const sxDay = t => { const d = new Date(t); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
+const sxMD = key => key.slice(5).replace('-', '/');
+const sxTime = t => { const d = new Date(t); return `${sxMD(sxDay(t))} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`; };
+async function renderStats() {
+  $('sx-asof').textContent = '불러오는 중…';
+  try {
+    const r = await fetch('/api/stats?days=' + $('sx-days').value);
+    const j = await r.json();
+    if (!r.ok) throw new Error(j.error || '불러오지 못했습니다.');
+    sxData = j;
+    drawStats();
+  } catch (e) { $('sx-asof').textContent = e.message; }
+}
+$('sx-days').onchange = renderStats;
+$('sx-reload').onclick = renderStats;
+function drawStats() {
+  const { events: ev, users, from, days, now } = sxData;
+  const nameOf = new Map(users.map(u => [u.empNo, u]));
+  const who = e => nameOf.get(e)?.name || (e ? '(삭제된 계정)' : '(없는 계정)');
+  const IN = new Set(['visit', 'login', 'auto', 'continue']);
+  const visits = ev.filter(x => x.k === 'visit');
+  const ins = ev.filter(x => IN.has(x.k) && x.e);
+  const today = sxDay(now);
+  const n = v => v.toLocaleString();
+  $('sx-asof').textContent = `${sxDay(from)} ~ ${today} · 기록 ${n(ev.length)}건`;
+  // 요약
+  const tiles = [
+    [new Set(ins.filter(x => sxDay(x.t) === today).map(x => x.e)).size, '오늘 방문자'],
+    [new Set(ins.map(x => x.e)).size, `방문자 (${days}일)`],
+    [visits.length, '접속 수 (화면 열기)'],
+    [ev.filter(x => x.k === 'login').length, '비밀번호 로그인'],
+    [ev.filter(x => x.k === 'auto').length, '자동 로그인'],
+    [ev.filter(x => x.k === 'fail').length, '로그인 실패'],
+  ];
+  $('sx-tiles').innerHTML = tiles.map(([v, l]) => `<div class="sx-tile"><div class="n">${n(v)}</div><div class="l">${l}</div></div>`).join('');
+  // 일별: 접속 수 막대, 방문자 수는 마우스를 올리면
+  const dayList = [];
+  for (const d = new Date(from); sxDay(d) <= today; d.setDate(d.getDate() + 1)) dayList.push({ key: sxDay(d), we: [0, 6].includes(d.getDay()) });
+  const perDay = new Map(dayList.map(d => [d.key, { v: 0, u: new Set() }]));
+  for (const x of visits) { const p = perDay.get(sxDay(x.t)); if (p) p.v++; }
+  for (const x of ins) perDay.get(sxDay(x.t))?.u.add(x.e);
+  const maxV = Math.max(1, ...[...perDay.values()].map(p => p.v));
+  const bar = (c, max, tip, cls = '') => `<div class="sx-col${cls}"><i style="height:${c ? Math.max(2, c / max * 100) : 0}%"></i><span class="tip">${tip}</span></div>`;
+  $('sx-daily').innerHTML = `<div class="sx-chart" role="img" aria-label="일별 접속 수">${dayList.map(d => { const p = perDay.get(d.key); return bar(p.v, maxV, `${sxMD(d.key)} · 접속 ${p.v} · 방문자 ${p.u.size}명`, d.we ? ' we' : ''); }).join('')}</div>
+    <div class="sx-axis"><span>${sxMD(dayList[0].key)}</span><span>최대 ${maxV}회</span><span>${sxMD(dayList.at(-1).key)}</span></div>`;
+  $('sx-daily-table').innerHTML = `<table class="list sx"><tr><th>날짜</th><th class="num">접속 수</th><th class="num">방문자</th><th>방문한 사람</th></tr>${dayList.slice().reverse().map(d => { const p = perDay.get(d.key); return `<tr><td>${d.key}</td><td class="num">${p.v}</td><td class="num">${p.u.size}</td><td class="muted">${[...p.u].map(e => esc(who(e))).join(', ')}</td></tr>`; }).join('')}</table>`;
+  // 사용자별 (사용 중인 계정 전부, 접속 없는 사람도 표시)
+  const rows = users.filter(u => u.active !== false).map(u => {
+    const mine = ev.filter(x => x.e === u.empNo), mi = mine.filter(x => IN.has(x.k)), mv = mine.filter(x => x.k === 'visit');
+    const devCount = {};
+    for (const x of mv) devCount[x.d] = (devCount[x.d] || 0) + 1;
+    const lastIn = mi.reduce((a, b) => (!a || b.t > a.t ? b : a), null);
+    return {
+      u, last: lastIn ? lastIn.t : 0, ip: lastIn ? lastIn.ip : '',
+      days: new Set(mi.map(x => sxDay(x.t))).size, visits: mv.length,
+      login: mine.filter(x => x.k === 'login').length, auto: mine.filter(x => x.k === 'auto' || x.k === 'continue').length,
+      fail: mine.filter(x => x.k === 'fail').length,
+      dev: Object.entries(devCount).sort((a, b) => b[1] - a[1]).map(([d, c]) => `${SX_DEV[d] || d} ${c}`).join(' · '),
+    };
+  }).sort((a, b) => b.last - a.last || a.u.name.localeCompare(b.u.name));
+  $('sx-users').innerHTML = '<tr><th>이름</th><th>부문</th><th>최근 접속</th><th class="num">접속한 날</th><th class="num">접속 수</th><th class="num">비밀번호 로그인</th><th class="num">자동 · 계속하기</th><th class="num">로그인 실패</th><th>기기</th><th>최근 IP</th></tr>'
+    + rows.map(r => `<tr><td style="white-space:nowrap"><b>${esc(r.u.name)}</b>${r.u.role === 'admin' ? ' <span class="role admin">관리자</span>' : ''}</td><td class="muted" style="white-space:nowrap">${esc(DEPT_NAME[r.u.dept] || r.u.dept)}</td><td style="white-space:nowrap">${r.last ? sxTime(r.last) : '<span class="muted">접속 없음</span>'}</td><td class="num">${r.days}</td><td class="num">${r.visits}</td><td class="num">${r.login}</td><td class="num">${r.auto}</td><td class="num">${r.fail ? `<b style="color:#b42318">${r.fail}</b>` : 0}</td><td class="muted" style="white-space:nowrap">${esc(r.dev || '-')}</td><td class="muted">${esc(r.ip || '-')}</td></tr>`).join('');
+  // 시간대별
+  const hrs = Array(24).fill(0);
+  for (const x of visits) hrs[new Date(x.t).getHours()]++;
+  const maxH = Math.max(1, ...hrs);
+  $('sx-hours').innerHTML = `<div class="sx-chart" style="height:120px" role="img" aria-label="시간대별 접속 수">${hrs.map((c, h) => bar(c, maxH, `${h}시 · 접속 ${c}`)).join('')}</div><div class="sx-axis"><span>0시</span><span>6시</span><span>12시</span><span>18시</span><span>23시</span></div>`;
+  // 메뉴 · 기기 · 브라우저: 이름 · 막대 · 수
+  const table = (id, counts, label) => {
+    const list = Object.entries(counts).sort((a, b) => b[1] - a[1]), max = Math.max(1, ...list.map(x => x[1]));
+    $(id).innerHTML = list.length ? list.map(([k, c]) => `<tr><td>${esc(label(k))}</td><td style="width:45%"><div class="sx-hbar"><span class="b" style="width:${Math.max(2, c / max * 100)}%"></span></div></td><td class="num">${n(c)}</td></tr>`).join('') : '<tr><td class="muted">기록 없음</td></tr>';
+  };
+  const cnt = (list, f) => list.reduce((o, x) => { const k = f(x); if (k) o[k] = (o[k] || 0) + 1; return o; }, {});
+  table('sx-menus', cnt(ev.filter(x => x.k === 'visit' || x.k === 'view'), x => x.v), k => VIEW_TITLE[k] || k);
+  table('sx-dev', cnt(visits, x => x.d), k => SX_DEV[k] || k);
+  table('sx-br', cnt(visits, x => x.b), k => k);
+  // 최근 기록
+  const recent = ev.slice().sort((a, b) => b.t - a.t).slice(0, 200);
+  $('sx-log').innerHTML = '<tr><th>시각</th><th>이름</th><th>종류</th><th>내용</th><th>기기</th><th>브라우저</th><th>IP</th></tr>'
+    + (recent.length ? recent.map(x => `<tr><td style="white-space:nowrap">${sxTime(x.t)}</td><td style="white-space:nowrap">${esc(who(x.e))}</td><td><span class="sx-k ${esc(x.k)}">${esc(SX_KIND[x.k] || x.k)}</span></td><td class="muted">${esc(x.v ? VIEW_TITLE[x.v] || x.v : '')}</td><td class="muted">${esc(SX_DEV[x.d] || x.d || '')}</td><td class="muted">${esc(x.b || '')}</td><td class="muted">${esc(x.ip || '')}</td></tr>`).join('')
+      : '<tr><td colspan="7" class="muted">아직 기록이 없습니다. 이 기능을 넣은 뒤부터 쌓입니다.</td></tr>');
+}
+
 // ---------- 화면 전환 ----------
-const RENDER = { editor: renderEditor, status: renderStatus, monthly: renderMonthly, list: renderList, wiki: renderWiki, sites: renderSites, settings: renderSettings, users: renderUsers, preview: renderPreview, itoa: renderItoa, 'itoa-list': renderItoaList, 'itoa-preview': renderItoaPreview, 'itoa-sites': renderSites, 'itoa-status': renderItoaStatus, 'itoa-wiki': renderWiki, 'manual-user': renderManual, 'manual-admin': renderManual, board: renderBoard };
+const RENDER = { editor: renderEditor, status: renderStatus, monthly: renderMonthly, list: renderList, wiki: renderWiki, sites: renderSites, settings: renderSettings, users: renderUsers, preview: renderPreview, itoa: renderItoa, 'itoa-list': renderItoaList, 'itoa-preview': renderItoaPreview, 'itoa-sites': renderSites, 'itoa-status': renderItoaStatus, 'itoa-wiki': renderWiki, 'manual-user': renderManual, 'manual-admin': renderManual, board: renderBoard, stats: renderStats };
 function show(v) {
   // 관리자 전용 화면
   if (['sites', 'users', 'settings', 'itoa-sites', 'itoa-status'].includes(v) && me && me.role !== 'admin') v = v.startsWith('itoa') ? 'itoa' : 'editor';
   if (v === 'manual-admin' && me && me.role !== 'admin') v = 'manual-user';
+  // 접속 통계: 전산개발담당자만
+  if (v === 'stats' && !me?.dev) v = homeView();
   // 내 부문이 아닌 화면이면 내 부문 첫 화면으로
   const vDept = ITOA_VIEWS.includes(v) ? 'itoa' : COMMON_VIEWS.includes(v) ? null : 'net';
   if (vDept && !myDepts().includes(vDept)) v = homeView();
@@ -3087,7 +3224,7 @@ document.addEventListener('keydown', e => { if (e.key === 'Escape') toggleDept(f
 const PALETTE = ['#f59e0b', '#8b3cf0', '#14a38b', '#e5484d', '#3b82f6', '#ea7a1a', '#22a35a', '#c2410c', '#0f766e', '#c2185b'];
 const colorOf = n => { let h = 0; for (const ch of n) h = (h * 31 + ch.codePointAt(0)) >>> 0; return PALETTE[h % PALETTE.length]; };
 const initials = n => [...n.replace(/\s/g, '')].slice(0, 2).join('');
-const VIEW_NAME = { editor: '작성 중', status: '전체 현황', monthly: '월간 보고', list: '보고서 목록', wiki: 'Wiki 검색', sites: '사업장 관리', settings: '설정', users: '사용자 관리', preview: '미리보기', itoa: 'ITOA 작성 중', 'itoa-list': 'ITOA 보고서 목록', 'itoa-preview': 'ITOA 미리보기', 'itoa-sites': 'ITOA 사업장 관리', 'itoa-status': 'ITOA 전체 현황', 'itoa-wiki': 'ITOA Wiki 검색', 'manual-user': '매뉴얼', 'manual-admin': '매뉴얼', board: '문의 및 제안' };
+const VIEW_NAME = { editor: '작성 중', status: '전체 현황', monthly: '월간 보고', list: '보고서 목록', wiki: 'Wiki 검색', sites: '사업장 관리', settings: '설정', users: '사용자 관리', preview: '미리보기', itoa: 'ITOA 작성 중', 'itoa-list': 'ITOA 보고서 목록', 'itoa-preview': 'ITOA 미리보기', 'itoa-sites': 'ITOA 사업장 관리', 'itoa-status': 'ITOA 전체 현황', 'itoa-wiki': 'ITOA Wiki 검색', 'manual-user': '매뉴얼', 'manual-admin': '매뉴얼', board: '문의 및 제안', stats: '관리 화면' };
 // 지금 보고 있는 보고서 (접속자 표시용)
 const ridOf = () => ITOA_VIEWS.includes(view) && view !== 'itoa-sites' ? itoaId || '' : ['editor', 'preview', 'status'].includes(view) ? currentId || '' : '';
 const cid = uid();
@@ -3101,6 +3238,7 @@ function setMe() {
   $('me-role').textContent = `${me.email || '메일 미등록'} · ${me.role === 'admin' ? '관리자' : '사용자'}`;
   $('me-av').innerHTML = avatar(me);
   $('menu-users').classList.toggle('hidden', me.role !== 'admin');
+  $('menu-stats').classList.toggle('hidden', !me.dev);
   $('menu-settings').classList.toggle('hidden', me.role !== 'admin');
   $('menu-sites').classList.toggle('hidden', me.role !== 'admin');
   $('menu-itoa-sites').classList.toggle('hidden', me.role !== 'admin');

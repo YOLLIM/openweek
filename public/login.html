@@ -312,7 +312,7 @@ $('f-setup').onsubmit = async e => {
     // 자동 로그인: 이 브라우저가 기억하는 계정으로 바로 들어간다 (로그아웃하면 기억이 지워져 멈춘다)
     if (info.browserUser && pref.get('ow_auto')) {
       try {
-        const { user, token } = await api('/api/auth/fork', {});
+        const { user, token } = await api('/api/auth/fork', { auto: true });
         tabToken.set(token);
         return user.mustChange ? step('change') : goApp();
       } catch { /* 기억이 만료됨: 로그인 화면으로 */ }

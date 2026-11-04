@@ -8,6 +8,9 @@ const SESSION_TTL = 7 * 24 * 3600 * 1000;      // 마지막 사용 후 7일
 const LONG_TTL = 30 * 24 * 3600 * 1000;        // [자동 로그인] 쿠키: 마지막 사용 후 30일
 const LOCK_LIMIT = 5, LOCK_MS = 5 * 60 * 1000;  // 5회 실패 시 5분 잠금
 const MIN_PW = 6;
+// 접속 통계를 볼 수 있는 계정(내부 ID). 운영 서버에서는 STATS_VIEWERS=id1,id2 로 바꿀 수 있다
+const STATS_VIEWERS = (process.env.STATS_VIEWERS || 'u0ba4db288f').split(',').map(s => s.trim()).filter(Boolean);
+const isStatsViewer = u => !!u && u.active !== false && STATS_VIEWERS.includes(u.empNo);
 
 function createAuth(dataDir) {
   const USERS_FILE = path.join(dataDir, 'users.json');
@@ -56,7 +59,7 @@ function createAuth(dataDir) {
   // 부문: 정하지 않은 계정은 관리자 = 둘 다, 일반 = 네트워크부문
   const deptOf = u => u.dept || (u.role === 'admin' ? 'all' : 'net');
   const deptsOf = u => (deptOf(u) === 'all' ? ['net', 'itoa'] : [deptOf(u)]);
-  const pub = u => u && ({ empNo: u.empNo, email: u.email || '', name: u.name, role: u.role, dept: deptOf(u), active: u.active, mustChange: !!u.mustChange, lastLogin: u.lastLogin || null, created: u.created, avatar: u.avatar || null });
+  const pub = u => u && ({ empNo: u.empNo, email: u.email || '', name: u.name, role: u.role, dept: deptOf(u), active: u.active, mustChange: !!u.mustChange, lastLogin: u.lastLogin || null, created: u.created, avatar: u.avatar || null, ...(isStatsViewer(u) ? { dev: true } : {}) });
 
   // 프로필 사진: data/avatars/<내부ID>.<확장자>, u.avatar = 버전(저장 시각)
   const AVATAR_DIR = path.join(dataDir, 'avatars');
@@ -190,6 +193,11 @@ function createAuth(dataDir) {
 
     list: () => users.map(pub),
     deptsOf,
+    isStatsViewer,
+    // 로그인 실패 기록용: 있는 계정이면 내부 ID
+    idOfLogin: id => findLogin(String(id || '').slice(0, 100))?.empNo || '',
+    // 통계 화면용 이름표 (내부 ID → 이름 · 부문 · 권한 · 상태)
+    roster: () => users.map(u => ({ empNo: u.empNo, name: u.name, dept: deptOf(u), role: u.role, active: u.active })),
     randomInitial: RANDOM_INITIAL,
 
     // 본인 또는 관리자만. dataUrl 이 비어 있으면 사진 삭제

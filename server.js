@@ -23,6 +23,7 @@ const MAX_LOGIN_BODY = 64 * 1024;   // 로그인 전에 받는 요청은 작게 
 
 fs.mkdirSync(BACKUP_DIR, { recursive: true });
 const auth = createAuth(DATA_DIR);
+const stats = require('./stats.js').createStats(DATA_DIR);
 const checker = createChecker(DATA_DIR);
 const mailer = createMailer(DATA_DIR, PORT);
 const board = createBoard(DATA_DIR, mailer);
@@ -146,15 +147,22 @@ const server = http.createServer(async (req, res) => {
       return sendJSON(res, 200, { user: auth.pub(auth.setup(await body(req, MAX_LOGIN_BODY))) });
     }
     if (P === '/api/auth/login' && M === 'POST') {
-      const { user: u, token, setCookie } = auth.login(await body(req, MAX_LOGIN_BODY));
+      const lb = await body(req, MAX_LOGIN_BODY);
+      let out;
+      try { out = auth.login(lb); } catch (e) { stats.log(req, auth.idOfLogin(lb?.email), 'fail'); throw e; }
+      const { user: u, token, setCookie } = out;
+      stats.log(req, u.empNo, 'login', lb.remember === true ? '자동 로그인 설정' : '');
       return sendJSON(res, 200, { user: auth.pub(u), token }, { 'Set-Cookie': setCookie });
     }
     // 새 창에서 [○○○으로 계속하기]
     if (P === '/api/auth/fork' && M === 'POST') {
+      const fb = await body(req, MAX_LOGIN_BODY).catch(() => ({}));
       const { user: u, token } = auth.fork(req);
+      stats.log(req, u.empNo, fb?.auto === true ? 'auto' : 'continue');
       return sendJSON(res, 200, { user: auth.pub(u), token });
     }
     if (P === '/api/auth/logout' && M === 'POST') {
+      if (user) stats.log(req, user.empNo, 'logout');
       const sc = auth.logout(req);
       return sendJSON(res, 200, { ok: true }, sc ? { 'Set-Cookie': sc } : {});
     }
@@ -217,6 +225,9 @@ const server = http.createServer(async (req, res) => {
       const p = await body(req);
       const cid = String(p.cid || '').slice(0, 40);
       if (cid) {
+        const prev = presence.get(cid), pv = String(p.view || '').slice(0, 40);
+        // 접속 통계: 새 창(화면을 새로 연 것)과 메뉴 이동
+        if (!p.leave && pv) { if (!prev) stats.log(req, user.empNo, 'visit', pv); else if (prev.view !== pv) stats.log(req, user.empNo, 'view', pv); }
         if (p.leave) presence.delete(cid);
         else presence.set(cid, {
           cid, since: presence.get(cid)?.since || Date.now(), seen: Date.now(),
@@ -225,6 +236,11 @@ const server = http.createServer(async (req, res) => {
         });
       }
       return sendJSON(res, 200, { presence: presenceList(), me: auth.pub(user) });
+    }
+    // 접속 통계 (전산개발담당자만)
+    if (P === '/api/stats' && M === 'GET') {
+      if (!auth.isStatsViewer(user)) return sendJSON(res, 403, { error: '볼 수 없는 화면입니다.' });
+      return sendJSON(res, 200, { ...stats.read(url.searchParams.get('days')), users: auth.roster(), now: Date.now() });
     }
     // 부문: 사용자 관리에서 정한 부문의 데이터만 보내고, 다른 부문의 작업·파일은 막는다
     const depts = auth.deptsOf(user);
@@ -426,6 +442,8 @@ const server = http.createServer(async (req, res) => {
 
 // 요청 하나의 예상 못 한 오류로 모든 사용자의 접속이 끊기지 않도록 기록만 남긴다
 process.on('unhandledRejection', e => console.error('[처리되지 않은 오류]', e));
+// 서비스를 멈출 때(systemctl stop · Ctrl+C) 접속 통계 등 남은 기록을 쓰고 끝낸다
+for (const sig of ['SIGTERM', 'SIGINT']) process.on(sig, () => process.exit(0));
 
 // HOST: 인터넷 서버에서는 127.0.0.1 로 두고 앞의 HTTPS 프록시(Caddy)만 접속하게 한다
 server.listen(PORT, process.env.HOST || '0.0.0.0', () => {
