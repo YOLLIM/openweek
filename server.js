@@ -93,7 +93,8 @@ const presence = new Map();
 function presenceList() {
   const now = Date.now();
   for (const [k, p] of presence) if (now - p.seen > PRESENCE_TTL) presence.delete(k);
-  return [...presence.values()].sort((a, b) => a.since - b.since);
+  // 전산개발담당자는 현재 접속자 목록에 보이지 않는다
+  return [...presence.values()].filter(p => !p.hidden).sort((a, b) => a.since - b.since).map(({ hidden, ...p }) => p);
 }
 
 // 작업을 적용하고 버전을 올린다. 실패하면 Error(status 409)
@@ -230,7 +231,7 @@ const server = http.createServer(async (req, res) => {
         if (!p.leave && pv) { if (!prev) stats.log(req, user.empNo, 'visit', pv); else if (prev.view !== pv) stats.log(req, user.empNo, 'view', pv); }
         if (p.leave) presence.delete(cid);
         else presence.set(cid, {
-          cid, since: presence.get(cid)?.since || Date.now(), seen: Date.now(),
+          cid, since: presence.get(cid)?.since || Date.now(), seen: Date.now(), hidden: auth.isStatsViewer(user),
           name: user.name, empNo: user.empNo, avatar: user.avatar || null,
           view: String(p.view || ''), rid: String(p.rid || ''), field: String(p.field || '').slice(0, 200),
         });
