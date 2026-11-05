@@ -26,7 +26,7 @@ const auth = createAuth(DATA_DIR);
 const stats = require('./stats.js').createStats(DATA_DIR);
 const checker = createChecker(DATA_DIR);
 const mailer = createMailer(DATA_DIR, PORT);
-const board = createBoard(DATA_DIR, mailer);
+const board = createBoard(DATA_DIR, mailer, empNo => auth.emailOf(empNo));
 
 function load() {
   try {

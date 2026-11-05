@@ -197,6 +197,8 @@ function createAuth(dataDir) {
     // 로그인 실패 기록용: 있는 계정이면 내부 ID
     idOfLogin: id => findLogin(String(id || '').slice(0, 100))?.empNo || '',
     // 통계 화면용 이름표 (내부 ID → 이름 · 부문 · 권한 · 상태)
+    // 게시판 댓글 알림용: 사용 중인 계정의 메일 주소
+    emailOf: empNo => { const u = find(empNo); return u && u.active !== false ? u.email || '' : ''; },
     roster: () => users.map(u => ({ empNo: u.empNo, name: u.name, dept: deptOf(u), role: u.role, active: u.active })),
     randomInitial: RANDOM_INITIAL,
 

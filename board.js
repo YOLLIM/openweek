@@ -1,9 +1,10 @@
 // 문의 및 제안 게시판: data/board.json 에 저장. 새 글이 올라오면 정해진 주소로 알림 메일을 보낸다.
+// 댓글이 달리면 글쓴이와 정해진 주소로 알림 메일을 보낸다 (댓글 쓴 사람 본인에게는 보내지 않음).
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 
-// 새 글 알림 메일 받는 사람 (고정)
+// 새 글 · 댓글 알림 메일 받는 사람 (고정, 전산개발담당자)
 const NOTIFY_TO = 'upsan77@gmail.com';
 const CATEGORIES = ['문의', '개선 제안'];
 // 첨부파일: 글 하나에 5개, 파일 하나 10MB, 합계 12MB. 실행 파일은 받지 않는다.
@@ -17,7 +18,7 @@ const OTHER_TYPES = { '.pdf': 'application/pdf', '.txt': 'text/plain; charset=ut
 const typeOf = name => { const ext = path.extname(name).toLowerCase(); return IMAGE_TYPES[ext] || OTHER_TYPES[ext] || 'application/octet-stream'; };
 const STATUSES = ['접수', '처리 중', '완료'];
 
-function createBoard(dataDir, mailer) {
+function createBoard(dataDir, mailer, emailOf = () => '') {
   const FILE = path.join(dataDir, 'board.json');
   let posts = [];
   try { posts = JSON.parse(fs.readFileSync(FILE, 'utf8')).posts || []; } catch { /* 처음 */ }
@@ -57,6 +58,20 @@ function createBoard(dataDir, mailer) {
     return f && fs.existsSync(fp) ? { ...f, path: fp } : null;
   }
 
+  // 댓글 알림: 글쓴이 + 전산개발담당자. 댓글 쓴 본인 · 같은 주소는 빼고, 메일이 늦어도 댓글 저장은 기다리지 않는다
+  function notifyComment(p, c, u, baseUrl) {
+    const self = String(emailOf(u.empNo) || '').toLowerCase();
+    const to = [...new Set([emailOf(p.by.empNo), NOTIFY_TO].map(x => String(x || '').trim().toLowerCase()).filter(x => x && x !== self))];
+    if (!to.length) return;
+    const subject = `[주간업무보고 문의 및 제안] 새 댓글: ${p.title}`;
+    const textBody = `문의 및 제안 게시판의 글에 새 댓글이 달렸습니다.\n\n번호: ${p.no}\n구분: ${p.category}\n제목: ${p.title}\n글쓴이: ${p.by.name}\n\n댓글 작성자: ${c.by.name}${c.admin ? ' (관리자)' : ''}\n작성 시각: ${new Date(c.at).toLocaleString('ko-KR')}\n\n${c.body}\n\n게시판 보기: ${baseUrl}/#board`;
+    for (const addr of to) {
+      mailer.notify(addr, subject, textBody)
+        .then(() => console.log(`[문의 및 제안 댓글] ${c.by.name} → ${p.title} · 알림 메일 보냄 (${addr})`))
+        .catch(e => console.log(`[문의 및 제안 댓글] 알림 메일 실패 (${addr}) - ${e.message}`));
+    }
+  }
+
   // 목록: 최신 글부터
   const list = () => posts.slice().sort((a, b) => b.at - a.at);
 
@@ -85,8 +100,10 @@ function createBoard(dataDir, mailer) {
       }
       case 'comment': {
         const p = find(body.id);
-        p.comments.push({ id: newId(), body: text(body.body, 3000, '댓글'), by: author(u), admin: u.role === 'admin', at: Date.now() });
+        const c = { id: newId(), body: text(body.body, 3000, '댓글'), by: author(u), admin: u.role === 'admin', at: Date.now() };
+        p.comments.push(c);
         save();
+        notifyComment(p, c, u, baseUrl);
         return { post: p };
       }
       case 'uncomment': {
