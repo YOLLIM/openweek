@@ -127,12 +127,14 @@
     for (const g of it.groups || []) for (const s of (it.sites || []).filter(x => x.groupId === g.id)) if (hasAtt(r.atts?.[s.id])) out.push({ label: r.mineOnly ? '' : itoaSiteLabel(g, s), ...r.atts[s.id] });
     return out;
   }
-  // 출력용 근무 현황 한 줄 집계: 일수는 사업장 합계, 글은 "회사_사업장: 내용" (사업장 하나뿐이거나 내 사업장 보고서면 내용만)
+  // 출력용 근무 현황 한 줄 집계: 근무 · 출근 일수는 그 주의 근무일(사업장 입력 중 가장 큰 값, 합계 아님),
+  // 지각/조퇴 일수는 사업장 합계, 글은 "회사_사업장: 내용" (사업장 하나뿐이거나 내 사업장 보고서면 내용만)
   function itoaAttTotal(db, r) {
     const rows = itoaAttRows(db, r);
     const sum = k => { const v = rows.filter(x => String(x[k] ?? '').trim() !== ''); return v.length ? v.reduce((a, x) => a + (Number(x[k]) || 0), 0) : ''; };
     const join = k => { const t = rows.filter(x => String(x[k] ?? '').trim()); return t.length === 1 ? String(t[0][k]) : t.map(x => (x.label ? `${x.label}: ${x[k]}` : x[k])).join(' / '); };
-    return { work: sum('work'), present: sum('present'), etcDays: sum('etcDays'), etcReason: join('etcReason'), emDate: join('emDate'), emContent: join('emContent'), note: join('note') };
+    const max = k => { const v = rows.filter(x => String(x[k] ?? '').trim() !== ''); return v.length ? Math.max(...v.map(x => Number(x[k]) || 0)) : ''; };
+    return { work: max('work'), present: max('present'), etcDays: sum('etcDays'), etcReason: join('etcReason'), emDate: join('emDate'), emContent: join('emContent'), note: join('note') };
   }
   // V3 백신 운영 현황도 사업장별: r.v3s[사업장id] = { installed, latest, fail, clean, note }
   // 건수 칸과 글 칸 (note = 업데이트 불가 PC · 사용자 및 사유, clean = 방역 활동 실시 내용)
