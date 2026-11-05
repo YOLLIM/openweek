@@ -200,7 +200,9 @@ const server = http.createServer(async (req, res) => {
     // 문의 및 제안 첨부파일: <img> · 링크는 헤더를 못 보내므로 주소의 t(창 토큰)로도 확인
     const bf = P.match(/^\/api\/board\/file\/([a-f0-9]+)\/([a-f0-9]+)$/);
     if (bf && M === 'GET') {
-      if (!user && !auth.userOfToken(url.searchParams.get('t'))) return sendJSON(res, 401, { error: '로그인이 필요합니다.' });
+      const fu = user || auth.userOfToken(url.searchParams.get('t'));
+      if (!fu) return sendJSON(res, 401, { error: '로그인이 필요합니다.' });
+      if (fu.role !== 'admin') return sendJSON(res, 403, { error: '관리자만 사용할 수 있습니다.' });
       const f = board.file(bf[1], bf[2]);
       if (!f) return sendJSON(res, 404, { error: '파일을 찾을 수 없습니다.' });
       const inline = /^image\//.test(f.type) && !url.searchParams.has('download');
@@ -261,8 +263,9 @@ const server = http.createServer(async (req, res) => {
       try { return sendJSON(res, 200, { version: applyOp(op, user) }); } catch (e) { return sendJSON(res, e.status || 500, { error: e.message, version: state.version }); }
     }
     // 담당자 지정 화면에서 쓰는 사용자 목록 (이름·사진만)
-    // 문의 및 제안 게시판 (모든 사용자)
+    // 문의 및 제안 게시판 (관리자만)
     if (P === '/api/board') {
+      if (user.role !== 'admin') return sendJSON(res, 403, { error: '관리자만 사용할 수 있습니다.' });
       if (M === 'GET') return sendJSON(res, 200, { posts: board.list(), categories: board.CATEGORIES, statuses: board.STATUSES });
       const result = await board.act(user, await body(req), mailer.status().baseUrl);
       return sendJSON(res, 200, { ...result, posts: board.list() });

@@ -683,7 +683,7 @@
         <a data-view="itoa-list" data-dept="itoa" class="off-dept"><svg class="i"><use href="#i-list"/></svg>보고서 목록</a>
         <a data-view="itoa-wiki" data-dept="itoa" class="off-dept"><svg class="i"><use href="#i-book"/></svg>주간보고 Wiki</a>
         <a data-view="itoa-sites" data-dept="itoa" id="menu-itoa-sites" class="off-dept hidden"><svg class="i"><use href="#i-building"/></svg>사업장 관리</a>
-        <a data-view="board"><svg class="i"><use href="#i-chat"/></svg>문의 및 제안</a>
+        <a data-view="board" id="menu-board" class="hidden"><svg class="i"><use href="#i-chat"/></svg>문의 및 제안</a>
         <a data-view="settings" id="menu-settings" class="hidden"><svg class="i"><use href="#i-gear"/></svg>설정</a>
         <a data-view="users" id="menu-users" class="hidden"><svg class="i"><use href="#i-user"/></svg>사용자 관리</a>
         <a data-view="stats" id="menu-stats" class="hidden"><svg class="i"><use href="#i-pulse"/></svg>접속 통계</a>
@@ -3177,7 +3177,7 @@ function drawStats() {
 const RENDER = { editor: renderEditor, status: renderStatus, monthly: renderMonthly, list: renderList, wiki: renderWiki, sites: renderSites, settings: renderSettings, users: renderUsers, preview: renderPreview, itoa: renderItoa, 'itoa-list': renderItoaList, 'itoa-preview': renderItoaPreview, 'itoa-sites': renderSites, 'itoa-status': renderItoaStatus, 'itoa-wiki': renderWiki, 'manual-user': renderManual, 'manual-admin': renderManual, board: renderBoard, stats: renderStats };
 function show(v) {
   // 관리자 전용 화면
-  if (['sites', 'users', 'settings', 'itoa-sites', 'itoa-status'].includes(v) && me && me.role !== 'admin') v = v.startsWith('itoa') ? 'itoa' : 'editor';
+  if (['sites', 'users', 'settings', 'itoa-sites', 'itoa-status', 'board'].includes(v) && me && me.role !== 'admin') v = v.startsWith('itoa') ? 'itoa' : 'editor';
   if (v === 'manual-admin' && me && me.role !== 'admin') v = 'manual-user';
   // 접속 통계: 전산개발담당자만
   if (v === 'stats' && !me?.dev) v = homeView();
@@ -3240,6 +3240,7 @@ function setMe() {
   $('menu-users').classList.toggle('hidden', me.role !== 'admin');
   $('menu-stats').classList.toggle('hidden', !me.dev);
   $('menu-settings').classList.toggle('hidden', me.role !== 'admin');
+  $('menu-board').classList.toggle('hidden', me.role !== 'admin');
   $('menu-sites').classList.toggle('hidden', me.role !== 'admin');
   $('menu-itoa-sites').classList.toggle('hidden', me.role !== 'admin');
   $('menu-itoa-status').classList.toggle('hidden', me.role !== 'admin');
