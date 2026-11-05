@@ -328,6 +328,11 @@
   .bd-imgs img { max-width: 320px; max-height: 240px; border: 1px solid #e5ddd0; border-radius: 10px; display: block; }
   .bd-docs { display: flex; flex-wrap: wrap; gap: 8px; }
   .bd-c-new { display: flex; gap: 8px; align-items: flex-end; margin-top: 12px; }
+  .bd-c-imgs { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+  .bd-c-imgs img { max-width: 220px; max-height: 160px; border: 1px solid #e5ddd0; border-radius: 8px; display: block; background: #fff; }
+  .bd-c-side { display: flex; flex-direction: column; gap: 6px; }
+  .bd-c-side .bd-pick { padding: 6px 10px; font-size: 12px; text-align: center; }
+  #bd-cflist { margin-top: 8px; }
   .bd-c-new textarea { flex: 1; }
 
   /* 사용자 매뉴얼 */
@@ -2973,30 +2978,37 @@ function drawBoard() {
       ${p.comments.map(c => `<div class="bd-c ${c.admin ? 'admin' : ''}">${avatar(usersBrief.find(u => u.empNo === c.by.empNo) || c.by)}<div class="bd-c-b">
         <div><b>${esc(c.by.name)}</b>${c.admin ? '<span class="bd-admin">관리자</span>' : ''}<span class="muted"> · ${bdDate(c.at)}</span>
         ${c.by.empNo === me?.empNo || admin ? `<button type="button" class="bd-x" data-bdc="${c.id}" title="댓글 삭제">×</button>` : ''}</div>
-        <div class="bd-c-t">${esc(c.body)}</div></div></div>`).join('')}
-      <div class="bd-c-new"><textarea id="bd-cmt" rows="3" placeholder="${admin ? '답변이나 처리 결과를 남겨 주세요.' : '댓글을 남겨 주세요.'}"></textarea><button type="button" class="teal" data-bda="comment">등록</button></div>
+        ${c.body ? `<div class="bd-c-t">${esc(c.body)}</div>` : ''}
+        ${c.files?.length ? `<div class="bd-c-imgs">${c.files.map(f => `<a href="${bdFileUrl(p, f)}" target="_blank" rel="noopener" title="${esc(f.name)} · 새 창에서 크게 보기"><img src="${bdFileUrl(p, f)}" alt="${esc(f.name)}" loading="lazy"></a>`).join('')}</div>` : ''}</div></div>`).join('')}
+      <div class="bd-c-new"><textarea id="bd-cmt" rows="3" placeholder="${admin ? '답변이나 처리 결과를 남겨 주세요.' : '댓글을 남겨 주세요.'} (화면 캡처는 여기에 붙여넣기 Ctrl+V)"></textarea>
+        <div class="bd-c-side"><label class="bd-pick" title="이미지 ${BD_MAX_FILES}개까지, 하나 10MB · 합계 12MB"><input type="file" id="bd-cfile" accept="image/png,image/jpeg,image/gif,image/webp,image/bmp" multiple hidden>🖼 이미지</label><button type="button" class="teal" data-bda="comment">등록</button></div></div>
+      <div class="bd-flist" id="bd-cflist"></div>
     </div></div>`;
+  drawBdFiles('bd-cflist', bdCFiles);
 }
 // 첨부파일: 글쓰기에서 고른 파일 (File 객체) · 글 보기의 첨부 목록
 const BD_MAX_FILES = 5, BD_MAX_FILE = 10 * 1024 * 1024, BD_MAX_TOTAL = 12 * 1024 * 1024;
-let bdFiles = [];
+let bdFiles = [], bdCFiles = [];   // 글쓰기 첨부 · 댓글 이미지
 const bdSize = n => n >= 1048576 ? `${(n / 1048576).toFixed(1)}MB` : `${Math.max(1, Math.round(n / 1024))}KB`;
 const bdIsImage = f => /^image\/(png|jpeg|gif|webp|bmp)$/.test(f.type);
 const bdFileUrl = (p, f, dl) => `/api/board/file/${p.id}/${f.id}?t=${encodeURIComponent(tabToken.get())}${dl ? '&download=1' : ''}`;
-function addBdFiles(list) {
+function addBdFiles(list, into = bdFiles, imagesOnly = false) {
+  const bdFiles = into;
   for (const f of list) {
+    if (imagesOnly && !bdIsImage(f)) { alert(`댓글에는 이미지만 첨부할 수 있습니다: ${f.name}`); continue; }
     if (bdFiles.length >= BD_MAX_FILES) { alert(`첨부파일은 ${BD_MAX_FILES}개까지 올릴 수 있습니다.`); break; }
     if (/\.(exe|bat|cmd|com|msi|scr|ps1|vbs|vbe|js|jse|wsf|wsh|hta|cpl|jar|lnk|reg|dll)$/i.test(f.name)) { alert(`실행 파일은 첨부할 수 없습니다: ${f.name}`); continue; }
     if (f.size > BD_MAX_FILE) { alert(`파일 하나는 10MB까지 올릴 수 있습니다: ${f.name}`); continue; }
     if (bdFiles.reduce((a, x) => a + x.size, 0) + f.size > BD_MAX_TOTAL) { alert('첨부파일은 합쳐서 12MB까지 올릴 수 있습니다.'); break; }
     bdFiles.push(f);
   }
-  drawBdFiles();
+  if (into === bdCFiles) drawBdFiles('bd-cflist', bdCFiles); else drawBdFiles();
 }
-function drawBdFiles() {
-  const el = $('bd-flist');
+function drawBdFiles(elId = 'bd-flist', list = bdFiles) {
+  const el = $(elId);
   if (!el) return;
-  el.innerHTML = bdFiles.map((f, i) => `<span class="bd-fchip">${bdIsImage(f) ? `<img src="${URL.createObjectURL(f)}" alt="">` : '📄'}<span>${esc(f.name)} <i>${bdSize(f.size)}</i></span><button type="button" data-bdf="${i}" title="빼기">×</button></span>`).join('');
+  const key = list === bdCFiles ? 'data-bdcf' : 'data-bdf';
+  el.innerHTML = list.map((f, i) => `<span class="bd-fchip">${bdIsImage(f) ? `<img src="${URL.createObjectURL(f)}" alt="">` : '📄'}<span>${esc(f.name)} <i>${bdSize(f.size)}</i></span><button type="button" ${key}="${i}" title="빼기">×</button></span>`).join('');
 }
 // 글 보기: 그림은 미리보기, 나머지는 내려받기
 function bdFilesView(p) {
@@ -3008,14 +3020,19 @@ function bdFilesView(p) {
     <div class="bd-docs">${fs.map(f => `<a class="bd-fchip" href="${bdFileUrl(p, f, true)}">${bdIsImage(f) ? '🖼' : '📄'}<span>${esc(f.name)} <i>${bdSize(f.size)}</i></span></a>`).join('')}</div></div>`;
 }
 const bdRead = f => new Promise((ok, no) => { const r = new FileReader(); r.onload = () => ok(String(r.result).split(',')[1] || ''); r.onerror = () => no(new Error(`파일을 읽지 못했습니다: ${f.name}`)); r.readAsDataURL(f); });
-$('bd-detail').addEventListener('change', e => { if (e.target.id === 'bd-file') { addBdFiles([...e.target.files]); e.target.value = ''; } });
+$('bd-detail').addEventListener('change', e => {
+  if (e.target.id === 'bd-file') { addBdFiles([...e.target.files]); e.target.value = ''; }
+  if (e.target.id === 'bd-cfile') { addBdFiles([...e.target.files], bdCFiles, true); e.target.value = ''; }
+});
 // 내용 칸에 붙여넣은 그림(화면 캡처)도 첨부
 $('bd-detail').addEventListener('paste', e => {
-  if (e.target.id !== 'bd-body' || boardMode !== 'write') return;
+  const cmt = e.target.id === 'bd-cmt' && boardMode === 'read';
+  if (!cmt && (e.target.id !== 'bd-body' || boardMode !== 'write')) return;
   const imgs = [...(e.clipboardData?.files || [])].filter(f => f.type.startsWith('image/'));
   if (!imgs.length) return;
   e.preventDefault();
-  addBdFiles(imgs.map((f, i) => new File([f], `캡처_${new Date().toISOString().slice(0, 19).replace(/[-:T]/g, '')}${i ? '_' + i : ''}.png`, { type: f.type })));
+  const named = imgs.map((f, i) => new File([f], `캡처_${new Date().toISOString().slice(0, 19).replace(/[-:T]/g, '')}${i ? '_' + i : ''}.png`, { type: f.type }));
+  if (cmt) addBdFiles(named, bdCFiles, true); else addBdFiles(named);
 });
 async function boardDo(body, after) {
   try { const j = await boardApi(body); if (after) after(j); drawBoard(); }
@@ -3023,7 +3040,7 @@ async function boardDo(body, after) {
 }
 $('bd-table').addEventListener('click', e => {
   const tr = e.target.closest('[data-bd]');
-  if (tr) { boardId = tr.dataset.bd; boardMode = 'read'; drawBoard(); window.scrollTo(0, 0); }
+  if (tr) { boardId = tr.dataset.bd; boardMode = 'read'; bdCFiles = []; drawBoard(); window.scrollTo(0, 0); }
 });
 ['bd-q', 'bd-cat', 'bd-st'].forEach(id => $(id).addEventListener(id === 'bd-q' ? 'input' : 'change', drawBoard));
 $('bd-new').onclick = () => { boardMode = 'write'; bdFiles = []; drawBoard(); };
@@ -3033,13 +3050,15 @@ $('bd-detail').addEventListener('change', e => {
 $('bd-detail').addEventListener('click', e => {
   const fx = e.target.closest('[data-bdf]');
   if (fx) { bdFiles.splice(+fx.dataset.bdf, 1); drawBdFiles(); return; }
+  const cfx = e.target.closest('[data-bdcf]');
+  if (cfx) { bdCFiles.splice(+cfx.dataset.bdcf, 1); drawBdFiles('bd-cflist', bdCFiles); return; }
   const cx = e.target.closest('[data-bdc]');
   if (cx) { if (confirm('댓글을 지울까요?')) boardDo({ action: 'uncomment', id: boardId, cid: cx.dataset.bdc }); return; }
   const b = e.target.closest('[data-bda]');
   if (!b) return;
   const form = () => ({ category: document.querySelector('input[name="bd-cat"]:checked')?.value, title: $('bd-title').value, body: $('bd-body').value });
   switch (b.dataset.bda) {
-    case 'back': case 'cancel': boardMode = boardMode === 'edit' ? 'read' : 'list'; drawBoard(); break;
+    case 'back': case 'cancel': boardMode = boardMode === 'edit' ? 'read' : 'list'; if (boardMode === 'list') bdCFiles = []; drawBoard(); break;
     case 'post':
       b.disabled = true; b.textContent = bdFiles.length ? '올리는 중…' : b.textContent;
       Promise.all(bdFiles.map(async f => ({ name: f.name, data: await bdRead(f) })))
@@ -3055,7 +3074,12 @@ $('bd-detail').addEventListener('click', e => {
     case 'delete': if (confirm('이 글을 삭제할까요? 댓글도 함께 지워집니다.')) boardDo({ action: 'delete', id: boardId }, () => { boardMode = 'list'; }); break;
     case 'comment': {
       const t = $('bd-cmt').value.trim();
-      if (t) boardDo({ action: 'comment', id: boardId, body: t });
+      if (!t && !bdCFiles.length) break;
+      b.disabled = true; b.textContent = bdCFiles.length ? '올리는 중…' : b.textContent;
+      Promise.all(bdCFiles.map(async f => ({ name: f.name, data: await bdRead(f) })))
+        .then(files => boardDo({ action: 'comment', id: boardId, body: t, files }, () => { bdCFiles = []; }))
+        .catch(err => alert(err.message))
+        .finally(() => { const btn = document.querySelector('[data-bda="comment"]'); if (btn) { btn.disabled = false; btn.textContent = '등록'; } });
       break;
     }
   }

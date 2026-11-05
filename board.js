@@ -32,12 +32,14 @@ function createBoard(dataDir, mailer, emailOf = () => '') {
   const FILE_DIR = path.join(dataDir, 'board');
   const fileDir = pid => path.join(FILE_DIR, pid);
   // 첨부 검사 후 저장: files = [{ name, data(base64) }] → [{ id, name, size, type }]
-  function saveFiles(pid, files) {
+  // imagesOnly: 댓글 첨부는 그림 파일만
+  function saveFiles(pid, files, imagesOnly) {
     if (!Array.isArray(files) || !files.length) return [];
     if (files.length > MAX_FILES) fail(`첨부파일은 ${MAX_FILES}개까지 올릴 수 있습니다.`);
     const list = files.map(f => {
       const name = path.basename(String(f.name || 'file')).replace(/[\\/:*?"<>|\u0000-\u001f]/g, '_').slice(0, 120) || 'file';
       if (BLOCKED.test(name)) fail(`실행 파일은 첨부할 수 없습니다: ${name}`);
+      if (imagesOnly && !IMAGE_TYPES[path.extname(name).toLowerCase()]) fail(`댓글에는 이미지(png · jpg · gif · webp · bmp)만 첨부할 수 있습니다: ${name}`);
       const buf = Buffer.from(String(f.data || ''), 'base64');
       if (!buf.length) fail(`빈 파일입니다: ${name}`);
       if (buf.length > MAX_FILE) fail(`파일 하나는 10MB까지 올릴 수 있습니다: ${name}`);
@@ -51,9 +53,10 @@ function createBoard(dataDir, mailer, emailOf = () => '') {
       return { id, name, size: buf.length, type: typeOf(name) };
     });
   }
-  // 내려받기: 글에 등록된 파일만
+  // 내려받기: 글이나 그 글의 댓글에 등록된 파일만
   function file(pid, fid) {
-    const p = posts.find(x => x.id === pid), f = p?.files?.find(x => x.id === fid);
+    const p = posts.find(x => x.id === pid);
+    const f = p && [...(p.files || []), ...p.comments.flatMap(c => c.files || [])].find(x => x.id === fid);
     const fp = f && path.join(fileDir(pid), f.id);
     return f && fs.existsSync(fp) ? { ...f, path: fp } : null;
   }
@@ -64,9 +67,10 @@ function createBoard(dataDir, mailer, emailOf = () => '') {
     const to = [...new Set([emailOf(p.by.empNo), NOTIFY_TO].map(x => String(x || '').trim().toLowerCase()).filter(x => x && x !== self))];
     if (!to.length) return;
     const subject = `[주간업무보고 문의 및 제안] 새 댓글: ${p.title}`;
-    const textBody = `문의 및 제안 게시판의 글에 새 댓글이 달렸습니다.\n\n번호: ${p.no}\n구분: ${p.category}\n제목: ${p.title}\n글쓴이: ${p.by.name}\n\n댓글 작성자: ${c.by.name}${c.admin ? ' (관리자)' : ''}\n작성 시각: ${new Date(c.at).toLocaleString('ko-KR')}\n\n${c.body}\n\n게시판 보기: ${baseUrl}/#board`;
+    const textBody = `문의 및 제안 게시판의 글에 새 댓글이 달렸습니다.\n\n번호: ${p.no}\n구분: ${p.category}\n제목: ${p.title}\n글쓴이: ${p.by.name}\n\n댓글 작성자: ${c.by.name}${c.admin ? ' (관리자)' : ''}\n작성 시각: ${new Date(c.at).toLocaleString('ko-KR')}\n\n${c.body || '(이미지)'}${c.files?.length ? `\n\n첨부 이미지 ${c.files.length}개: ${c.files.map(f => f.name).join(', ')}` : ''}\n\n게시판 보기: ${baseUrl}/#board`;
+    const attachments = (c.files || []).map(f => ({ filename: f.name, path: path.join(fileDir(p.id), f.id), contentType: f.type }));
     for (const addr of to) {
-      mailer.notify(addr, subject, textBody)
+      mailer.notify(addr, subject, textBody, attachments)
         .then(() => console.log(`[문의 및 제안 댓글] ${c.by.name} → ${p.title} · 알림 메일 보냄 (${addr})`))
         .catch(e => console.log(`[문의 및 제안 댓글] 알림 메일 실패 (${addr}) - ${e.message}`));
     }
@@ -100,7 +104,10 @@ function createBoard(dataDir, mailer, emailOf = () => '') {
       }
       case 'comment': {
         const p = find(body.id);
-        const c = { id: newId(), body: text(body.body, 3000, '댓글'), by: author(u), admin: u.role === 'admin', at: Date.now() };
+        // 이미지만 올리는 댓글도 받는다
+        const hasImg = Array.isArray(body.files) && body.files.length > 0;
+        const c = { id: newId(), body: hasImg && !String(body.body ?? '').trim() ? '' : text(body.body, 3000, '댓글'), by: author(u), admin: u.role === 'admin', at: Date.now() };
+        c.files = saveFiles(p.id, body.files, true);
         p.comments.push(c);
         save();
         notifyComment(p, c, u, baseUrl);
@@ -110,6 +117,7 @@ function createBoard(dataDir, mailer, emailOf = () => '') {
         const p = find(body.id), c = p.comments.find(x => x.id === body.cid) || fail('댓글을 찾을 수 없습니다.', 404);
         if (c.by.empNo !== u.empNo && u.role !== 'admin') fail('본인 댓글만 지울 수 있습니다.', 403);
         p.comments = p.comments.filter(x => x !== c);
+        for (const f of c.files || []) fs.rmSync(path.join(fileDir(p.id), f.id), { force: true });
         save();
         return { post: p };
       }
