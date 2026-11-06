@@ -1386,6 +1386,14 @@ function repImgs(r, kind, sid) {
 const rptImgs = (r, kind, sid) => { const list = r.imgs?.[kind]?.[sid] || []; return list.length ? `<div class="rpt-imgs">${list.map(m => `<img src="${repImgUrl(r, m)}" alt="${esc(m.name)}">`).join('')}</div>` : ''; };
 // 큰 그림은 긴 변 2000px · JPEG 로 줄여서 올린다 (5MB 제한)
 async function shrinkImg(file) {
+  if (file.type === 'image/webp' && file.size <= 4 * 1024 * 1024) {
+    // webp 는 PPT · 엑셀에 넣을 수 없어 png 로 바꾼다
+    const bmp = await createImageBitmap(file);
+    const c = document.createElement('canvas'); c.width = bmp.width; c.height = bmp.height;
+    c.getContext('2d').drawImage(bmp, 0, 0);
+    const blob = await new Promise(ok => c.toBlob(ok, 'image/png'));
+    return new File([blob], file.name.replace(/\.\w+$/, '') + '.png', { type: 'image/png' });
+  }
   if (file.size <= 4 * 1024 * 1024 && file.type !== 'image/bmp') return file;
   const bmp = await createImageBitmap(file);
   const k = Math.min(1, 2000 / Math.max(bmp.width, bmp.height));
@@ -1551,7 +1559,7 @@ $('as-form').onsubmit = e => {
 
 // ---------- 사업장별 전주 불러오기 (2. 변경 및 신규 업무, 3. 장애 및 이슈 사항) ----------
 const prevBtn = (kind, sid) => `<div class="prev-row"><button type="button" data-prev="${kind}" data-sid="${sid}">전주 불러오기</button></div>`;
-$('ed-body').addEventListener('click', e => {
+$('ed-body').addEventListener('click', async e => {
   const btn = e.target.closest('[data-prev]');
   const r = cur();
   if (!btn || !r || r.locked) return;
@@ -1564,17 +1572,32 @@ $('ed-body').addEventListener('click', e => {
   const pr = sortedReports().filter(x => x.date < r.date).pop();
   const prevText = (pr?.[kind]?.[sid] || '').replace(/\s+$/, '');
   if (!pr) return alert(`이전 주 보고서가 없습니다.`);
-  if (!prevText.trim()) return alert(`전주(${weekLabel(pr)})에 ${siteName}의 ${secName} 내용이 없습니다.`);
-  const now = (r[kind]?.[sid] || '').replace(/\s+$/, '');
-  let value = prevText;
-  if (now.trim()) {
-    // 이미 쓴 내용이 있으면 덮어쓰지 않고 뒤에 붙일지 묻는다
-    if (!confirm(`${siteName}의 ${secName}에 이미 작성한 내용이 있습니다.\n전주 내용을 기존 내용 아래에 이어 붙일까요?`)) return;
-    value = `${now}\n${prevText}`;
+  const prevImgs = pr.imgs?.[kind]?.[sid] || [];
+  if (!prevText.trim() && !prevImgs.length) return alert(`전주(${weekLabel(pr)})에 ${siteName}의 ${secName} 내용이 없습니다.`);
+  if (prevText.trim()) {
+    const now = (r[kind]?.[sid] || '').replace(/\s+$/, '');
+    let value = prevText;
+    if (now.trim()) {
+      // 이미 쓴 내용이 있으면 덮어쓰지 않고 뒤에 붙일지 묻는다
+      if (!confirm(`${siteName}의 ${secName}에 이미 작성한 내용이 있습니다.\n전주 내용을 기존 내용 아래에 이어 붙일까요?${prevImgs.length ? '\n(전주 그림도 함께 붙습니다)' : ''}`)) return;
+      value = `${now}\n${prevText}`;
+    }
+    commit({ type: 'report.text', id: r.id, kind, sid, value });
+    const el = document.querySelector(`#ed-body textarea[data-kind="${kind}"][data-sid="${sid}"]`);
+    if (el) { el.value = value; autosize(el); el.focus(); }
   }
-  commit({ type: 'report.text', id: r.id, kind, sid, value });
-  const el = document.querySelector(`#ed-body textarea[data-kind="${kind}"][data-sid="${sid}"]`);
-  if (el) { el.value = value; autosize(el); el.focus(); }
+  // 전주 그림 복사 (이미 불러온 그림은 다시 붙지 않음)
+  if (prevImgs.length) {
+    setStatus('전주 그림 불러오는 중…');
+    flushDirty();
+    for (let i = 0; i < 30 && (inflight || queue.length); i++) await new Promise(ok => setTimeout(ok, 100));
+    const res = await fetch(`/api/report/${r.id}/img/copy`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ kind, sid, from: pr.id }) });
+    const j = await res.json().catch(() => ({}));
+    if (!res.ok) alert(j.error || '전주 그림을 불러오지 못했습니다.');
+    else if (!j.copied && j.skipped) alert('전주 그림은 이미 불러와 있습니다.');
+    await refresh(true);
+    setStatus('저장됨 ' + new Date().toLocaleTimeString());
+  }
 });
 
 // ---------- 사업장별 작성 권한 ----------
@@ -1647,9 +1670,11 @@ function renderMonthly() {
     sites.map(s => { const v = COLS.map(c => sum(s, c)); return `<tr><td class="st-site"><span class="st-grp">${esc(groupName(s.groupId))}</span><b>${esc(s.name)}</b></td>${v.map(x => `<td class="num">${x || ''}</td>`).join('')}<td class="num"><b>${v.reduce((a, x) => a + x, 0) || ''}</b></td></tr>`; }).join('') +
     `<tr class="sum"><td>계 (${reps.length}주)</td>${COLS.map(c => `<td class="num">${sites.reduce((a, s) => a + sum(s, c), 0) || ''}</td>`).join('')}<td class="num">${sites.reduce((a, s) => a + COLS.reduce((b, c) => b + sum(s, c), 0), 0) || ''}</td></tr>`;
   const lines = (s, k) => reps.reduce((a, r) => a + lineCount(k === 'works' ? Ops.worksText(r, s) : r[k]?.[s.id]), 0);
+  // 그림 수 (세부 구분 칸 포함)
+  const imgN = (s, k) => reps.reduce((a, r) => a + Object.entries(r.imgs?.[k] || {}).filter(([key]) => key.split(':')[0] === s.id).reduce((b, [, l]) => b + l.length, 0), 0);
   const unit = (n, u) => n ? n + u : '-';
   $('mo-texts').innerHTML = '<tr><th>사업장</th><th>2. 변경 및 신규 업무</th><th>3. 장애 및 이슈 사항</th></tr>' +
-    sites.map(s => `<tr><td class="st-site"><span class="st-grp">${esc(groupName(s.groupId))}</span><b>${esc(s.name)}</b></td><td class="num">${unit(lines(s, 'works'), '줄')}</td><td class="num">${unit(lines(s, 'issues'), '줄')}</td></tr>`).join('');
+    sites.map(s => `<tr><td class="st-site"><span class="st-grp">${esc(groupName(s.groupId))}</span><b>${esc(s.name)}</b></td><td class="num">${unit(lines(s, 'works'), '줄')}${imgN(s, 'works') ? ` · 그림 ${imgN(s, 'works')}장` : ''}</td><td class="num">${unit(lines(s, 'issues'), '줄')}${imgN(s, 'issues') ? ` · 그림 ${imgN(s, 'issues')}장` : ''}</td></tr>`).join('');
 }
 $('mo-month').addEventListener('change', renderMonthly);
 $('mo-xlsx').onclick = e => downloadFile(`/api/monthly/xlsx?month=${$('mo-month').value}`, `월간업무보고_${$('mo-month').value}.xlsx`, e.currentTarget);

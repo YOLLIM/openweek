@@ -1,7 +1,10 @@
 // 주간업무보고 PPT 생성 (A4 가로, 보고서 양식 그대로)
 const PptxGenJS = require('pptxgenjs');
 const path = require('path');
+const fs = require('fs');
 const Ops = require('./public/ops.js');
+const { imgSize, fit } = require('./imgsize.js');
+const IMG_MIME = { png: 'image/png', jpg: 'image/jpeg', gif: 'image/gif' };   // PPT 가 받는 형식
 
 const LOGO = path.join(__dirname, 'public', 'img', 'dongkuk.png');  // 295×64
 
@@ -44,7 +47,8 @@ function splitText(text, widthIn, maxH) {
   return chunks;
 }
 
-// opts: { title, dateLabel, periodLabel } — 월간보고처럼 제목·기간 표기를 바꿀 때 사용
+// opts: { title, dateLabel, periodLabel, imgFile } — 월간보고처럼 제목·기간 표기를 바꿀 때 사용
+// imgFile(보고서id, 그림정보) → 2 · 3번 칸에 붙인 그림 파일 경로 (없으면 그림을 넣지 않음)
 function build(db, r, opts = {}) {
   const S = { ...db.settings, title: opts.title || db.settings.title };
   const pres = new PptxGenJS();
@@ -127,10 +131,36 @@ function build(db, r, opts = {}) {
   const TABLE_Y = 1.3, HEAD_H = 0.32;
   const maxRowH = BODY_BOTTOM - TABLE_Y - HEAD_H;
 
+  // 칸에 붙인 그림: 읽을 수 있는 파일만 [{ data, size, name }]
+  const cellImgs = (kind, key) => (r.imgs?.[kind]?.[key] || []).map(m => {
+    try {
+      const f = opts.imgFile && opts.imgFile(m.rid || r.id, m);
+      if (!f || !IMG_MIME[m.ext]) return null;
+      const buf = fs.readFileSync(f);
+      return { data: `${IMG_MIME[m.ext]};base64,${buf.toString('base64')}`, size: imgSize(buf), name: m.name || '' };
+    } catch { return null; }
+  }).filter(Boolean);
+  // 그림 슬라이드: 한 장에 2개까지 나란히, 비율 유지
+  function imageSlides(title, name, imgs) {
+    const IMG_Y = 1.35, AREA_H = BODY_BOTTOM - IMG_Y - 0.1, GAP = 0.3;
+    const pagesN = Math.ceil(imgs.length / 2);
+    for (let i = 0; i < imgs.length; i += 2) {
+      const s = addSlide();
+      bar(s, 0.55);
+      heading(s, `${title} · ${name} 그림${pagesN > 1 ? ` (${i / 2 + 1}/${pagesN})` : ''}`, 0.72);
+      const pair = imgs.slice(i, i + 2), boxW = pair.length === 1 ? TW : (TW - GAP) / 2;
+      pair.forEach((im, j) => {
+        const sz = fit(im.size, boxW, AREA_H);
+        const x = X + j * (boxW + GAP) + (boxW - sz.w) / 2;
+        s.addImage({ data: im.data, x, y: IMG_Y, w: sz.w, h: sz.h, altText: im.name });
+      });
+    }
+  }
+
   function textSlides(title, colTitle, entries, minRowH) {
-    // entries: [{ name, text }] → 슬라이드별로 행 배치 (긴 내용은 줄 단위로 나눠 다음 장으로)
+    // entries: [{ name, text, imgs }] → 슬라이드별로 행 배치 (긴 내용은 줄 단위로 나눠 다음 장으로), 그림은 이어지는 장에
     const pieces = [];
-    entries.forEach(e => splitText(e.text, BODY_W - 0.25, maxRowH - PAD).forEach(c => pieces.push({ name: e.name, lines: c.lines, h: Math.max(minRowH, c.h + PAD) })));
+    entries.forEach(e => splitText((e.text || '') + (e.imgs?.length ? `${(e.text || '').trim() ? '\n' : ''}[그림 ${e.imgs.length}장 · 이어지는 장 참조]` : ''), BODY_W - 0.25, maxRowH - PAD).forEach(c => pieces.push({ name: e.name, lines: c.lines, h: Math.max(minRowH, c.h + PAD) })));
     if (!pieces.length) pieces.push({ name: '', lines: [''], h: minRowH });
 
     const pages = [];
@@ -155,17 +185,18 @@ function build(db, r, opts = {}) {
       ]));
       s.addTable(rows, { x: X, y: TABLE_Y, w: TW, colW: [SITE_W, BODY_W], rowH: [HEAD_H, ...page.map(p => p.h)], fontFace: FONT, valign: 'top' });
     });
+    entries.forEach(e => { if (e.imgs?.length) imageSlides(title, e.name, e.imgs); });
   }
 
   db.groups.forEach((g, gi) => {
     // 세부 구분이 있는 사업장은 구분 이름으로 줄을 나눈다 (예: 본사 → DKS / DKCM / DKHD)
-    let entries = sites.filter(x => x.groupId === g.id).flatMap(x => Ops.workParts(r, x).map(p => ({ name: p.name || x.name, text: p.text })));
-    if (S.hideEmpty) entries = entries.filter(x => x.text.trim());
+    let entries = sites.filter(x => x.groupId === g.id).flatMap(x => Ops.workParts(r, x).map(p => ({ name: p.name || x.name, text: p.text, imgs: cellImgs('works', p.key) })));
+    if (S.hideEmpty) entries = entries.filter(x => x.text.trim() || x.imgs.length);
     if (!entries.length) return;
     textSlides(`2-${gi + 1}. ${g.name} 변경 및 신규 업무`, '변경 / 신규 업무', entries, 1.2);
   });
 
-  const iss = sites.filter(x => (r.issues[x.id] || '').trim()).map(x => ({ name: x.name, text: r.issues[x.id] }));
+  const iss = sites.map(x => ({ name: x.name, text: r.issues[x.id] || '', imgs: cellImgs('issues', x.id) })).filter(x => x.text.trim() || x.imgs.length);
   textSlides('3. 장애 및 이슈 사항', '장애 및 이슈 사항', iss, 0.8);
 
   return pres;
