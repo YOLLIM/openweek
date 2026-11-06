@@ -328,6 +328,26 @@
   .bd-imgs img { max-width: 320px; max-height: 240px; border: 1px solid #e5ddd0; border-radius: 10px; display: block; }
   .bd-docs { display: flex; flex-wrap: wrap; gap: 8px; }
   .bd-c-new { display: flex; gap: 8px; align-items: flex-end; margin-top: 12px; }
+  /* 리액션(이모티콘) */
+  .bd-rx { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 8px; }
+  .bd-rx-chip { display: inline-flex; align-items: center; gap: 4px; border: 1px solid #e5ddd0; background: #fff; border-radius: 14px; padding: 2px 9px 2px 7px; font-size: 13px; line-height: 1.5; cursor: pointer; }
+  .bd-rx-chip .e { font-size: 15px; }
+  .bd-rx-chip b { font-size: 12px; font-weight: 700; color: var(--text); font-variant-numeric: tabular-nums; }
+  .bd-rx-chip.mine { border-color: var(--teal); background: #e7f3f3; }
+  .bd-rx-chip:hover { background: #f3efe8; }
+  .bd-rx-chip.mine:hover { background: #d9ecec; }
+  .bd-rx-add { display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 26px; border: 1px solid #e5ddd0; background: #fff; border-radius: 14px; font-size: 15px; cursor: pointer; color: var(--muted); padding: 0; }
+  .bd-rx-add:hover { background: #f3efe8; }
+  #rx-pop { position: fixed; z-index: 60; width: 340px; max-width: calc(100vw - 24px); max-height: 420px; display: flex; flex-direction: column; background: #fff; border: 1px solid #e5ddd0; border-radius: 14px; box-shadow: 0 12px 32px rgba(29,36,51,.18); }
+  #rx-pop .rx-top { display: flex; align-items: center; gap: 8px; padding: 12px 12px 8px; }
+  #rx-pop input { flex: 1; border: 1px solid #d9d2c5; border-radius: 10px; padding: 8px 10px; font-size: 13px; }
+  #rx-pop .rx-x { border: 0; background: none; font-size: 20px; color: var(--muted); cursor: pointer; padding: 0 4px; }
+  #rx-pop .rx-body { overflow-y: auto; padding: 0 10px 12px; }
+  #rx-pop .rx-h { font-size: 12px; color: var(--muted); margin: 10px 4px 4px; }
+  #rx-pop .rx-grid { display: grid; grid-template-columns: repeat(8, 1fr); gap: 2px; }
+  #rx-pop .rx-grid button { border: 0; background: none; font-size: 22px; line-height: 1; padding: 6px 0; border-radius: 8px; cursor: pointer; }
+  #rx-pop .rx-grid button:hover, #rx-pop .rx-grid button:focus-visible { background: #f3efe8; outline: none; }
+  #rx-pop .rx-none { color: var(--muted); font-size: 13px; padding: 16px 4px; }
   .bd-c-imgs { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
   .bd-c-imgs img { max-width: 220px; max-height: 160px; border: 1px solid #e5ddd0; border-radius: 8px; display: block; background: #fff; }
   .bd-c-side { display: flex; flex-direction: column; gap: 6px; }
@@ -2917,6 +2937,7 @@ async function boardApi(body) {
   const j = await res.json();
   if (!res.ok) throw new Error(j.error);
   boardPosts = j.posts || [];
+  if (j.reactions) bdReactions = j.reactions;
   return j;
 }
 const bdDate = t => new Date(t).toLocaleString([], { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
@@ -2926,6 +2947,9 @@ async function renderBoard() {
   try { await boardApi(); drawBoard(); } catch (e) { $('bd-table').innerHTML = `<tr><td class="muted">게시판을 불러오지 못했습니다: ${esc(e.message)}</td></tr>`; }
 }
 function drawBoard() {
+  closeRx();
+  // 다시 그려도 쓰던 댓글은 남긴다 (이모티콘 · 상태를 바꿀 때)
+  const keepCmt = $('bd-cmt') && boardMode === 'read' ? { id: boardId, v: $('bd-cmt').value } : null;
   $('bd-list-wrap').classList.toggle('hidden', boardMode !== 'list');
   $('bd-detail').classList.toggle('hidden', boardMode === 'list');
   if (boardMode === 'list') {
@@ -2971,7 +2995,7 @@ function drawBoard() {
     </div>
     <h2 class="bd-h">${esc(p.title)}</h2>
     <div class="bd-meta">${avatar(usersBrief.find(u => u.empNo === p.by.empNo) || p.by)} <b>${esc(p.by.name)}</b> · ${bdDate(p.at)}${p.edited ? ' · 수정됨' : ''} · No.${p.no}</div>
-    <div class="bd-body">${esc(p.body)}</div>
+    <div class="bd-body">${esc(p.body)}${bdRx(p)}</div>
     ${bdFilesView(p)}
     <div class="bd-cmts">
       <b>댓글 ${p.comments.length}</b>
@@ -2979,13 +3003,64 @@ function drawBoard() {
         <div><b>${esc(c.by.name)}</b>${c.admin ? '<span class="bd-admin">관리자</span>' : ''}<span class="muted"> · ${bdDate(c.at)}</span>
         ${c.by.empNo === me?.empNo || admin ? `<button type="button" class="bd-x" data-bdc="${c.id}" title="댓글 삭제">×</button>` : ''}</div>
         ${c.body ? `<div class="bd-c-t">${esc(c.body)}</div>` : ''}
-        ${c.files?.length ? `<div class="bd-c-imgs">${c.files.map(f => `<a href="${bdFileUrl(p, f)}" target="_blank" rel="noopener" title="${esc(f.name)} · 새 창에서 크게 보기"><img src="${bdFileUrl(p, f)}" alt="${esc(f.name)}" loading="lazy"></a>`).join('')}</div>` : ''}</div></div>`).join('')}
+        ${c.files?.length ? `<div class="bd-c-imgs">${c.files.map(f => `<a href="${bdFileUrl(p, f)}" target="_blank" rel="noopener" title="${esc(f.name)} · 새 창에서 크게 보기"><img src="${bdFileUrl(p, f)}" alt="${esc(f.name)}" loading="lazy"></a>`).join('')}</div>` : ''}
+        ${bdRx(c, c.id)}</div></div>`).join('')}
       <div class="bd-c-new"><textarea id="bd-cmt" rows="3" placeholder="${admin ? '답변이나 처리 결과를 남겨 주세요.' : '댓글을 남겨 주세요.'} (화면 캡처는 여기에 붙여넣기 Ctrl+V)"></textarea>
         <div class="bd-c-side"><label class="bd-pick" title="이미지 ${BD_MAX_FILES}개까지, 하나 10MB · 합계 12MB"><input type="file" id="bd-cfile" accept="image/png,image/jpeg,image/gif,image/webp,image/bmp" multiple hidden>🖼 이미지</label><button type="button" class="teal" data-bda="comment">등록</button></div></div>
       <div class="bd-flist" id="bd-cflist"></div>
     </div></div>`;
   drawBdFiles('bd-cflist', bdCFiles);
+  if (keepCmt && keepCmt.id === boardId) $('bd-cmt').value = keepCmt.v;
 }
+// 리액션(이모티콘): 칩(이모지 · 수, 내가 누른 것은 강조) + [이모티콘 달기] 버튼
+let bdReactions = [];   // 서버가 준 목록 [[분류, [[이모지, 검색어]]]]
+const RX_RECENT_KEY = 'ow_rx_recent';
+const rxRecent = () => { try { return JSON.parse(localStorage.getItem(RX_RECENT_KEY) || '[]').filter(e => bdReactions.some(([, l]) => l.some(([x]) => x === e))); } catch { return []; } };
+const rxRemember = e => { try { localStorage.setItem(RX_RECENT_KEY, JSON.stringify([e, ...rxRecent().filter(x => x !== e)].slice(0, 16))); } catch { /* 저장 안 됨 */ } };
+function bdRx(t, cid = '') {
+  const rs = Object.entries(t.reactions || {}).filter(([, l]) => l.length);
+  const chips = rs.map(([e, l]) => { const mine = l.some(x => x.empNo === me?.empNo); return `<button type="button" class="bd-rx-chip${mine ? ' mine' : ''}" data-rx="${esc(e)}" data-rxc="${esc(cid)}" title="${esc(l.map(x => x.name).join(', '))}${mine ? ' · 다시 누르면 취소' : ''}"><span class="e">${e}</span><b>${l.length}</b></button>`; }).join('');
+  return `<div class="bd-rx">${chips}<button type="button" class="bd-rx-add" data-rxadd="${esc(cid)}" title="이모티콘 달기" aria-label="이모티콘 달기">☺︎<span style="font-size:10px;margin-left:-1px">+</span></button></div>`;
+}
+function closeRx() { $('rx-pop')?.remove(); }
+function openRx(btn, cid) {
+  closeRx();
+  const pop = document.createElement('div');
+  pop.id = 'rx-pop'; pop.setAttribute('role', 'dialog'); pop.setAttribute('aria-label', '이모티콘 고르기');
+  pop.dataset.cid = cid;
+  pop.innerHTML = '<div class="rx-top"><input id="rx-q" placeholder="찾고 싶은 이모티콘 검색 (예: 감사, 확인)" autocomplete="off"><button type="button" class="rx-x" title="닫기">×</button></div><div class="rx-body" id="rx-body"></div>';
+  document.body.appendChild(pop);
+  const draw = () => {
+    const q = $('rx-q').value.trim();
+    const grid = list => `<div class="rx-grid">${list.map(([e, k]) => `<button type="button" data-rxpick="${esc(e)}" title="${esc(k)}">${e}</button>`).join('')}</div>`;
+    if (q) {
+      const hit = bdReactions.flatMap(([, l]) => l).filter(([e, k]) => k.includes(q) || e === q);
+      $('rx-body').innerHTML = hit.length ? grid(hit) : '<div class="rx-none">찾는 이모티콘이 없습니다.</div>';
+      return;
+    }
+    const recent = rxRecent().map(e => bdReactions.flatMap(([, l]) => l).find(([x]) => x === e)).filter(Boolean);
+    $('rx-body').innerHTML = (recent.length ? `<div class="rx-h">최근 사용</div>${grid(recent)}` : '') + bdReactions.map(([h, l]) => `<div class="rx-h">${esc(h)}</div>${grid(l)}`).join('');
+  };
+  draw();
+  // 버튼 근처에, 화면 밖으로 나가지 않게
+  const r = btn.getBoundingClientRect(), w = pop.offsetWidth, h = pop.offsetHeight;
+  pop.style.left = Math.max(12, Math.min(r.left, innerWidth - w - 12)) + 'px';
+  pop.style.top = (r.bottom + 6 + h < innerHeight - 8 ? r.bottom + 6 : Math.max(8, r.top - h - 6)) + 'px';
+  $('rx-q').addEventListener('input', draw);
+  $('rx-q').focus();
+  pop.addEventListener('click', e => {
+    e.stopPropagation();
+    if (e.target.closest('.rx-x')) return closeRx();
+    const b = e.target.closest('[data-rxpick]');
+    if (!b) return;
+    rxRemember(b.dataset.rxpick);
+    closeRx();
+    boardDo({ action: 'react', id: boardId, cid: cid || undefined, emoji: b.dataset.rxpick });
+  });
+}
+document.addEventListener('click', e => { if ($('rx-pop') && !e.target.closest('#rx-pop') && !e.target.closest('[data-rxadd]')) closeRx(); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeRx(); });
+
 // 첨부파일: 글쓰기에서 고른 파일 (File 객체) · 글 보기의 첨부 목록
 const BD_MAX_FILES = 5, BD_MAX_FILE = 10 * 1024 * 1024, BD_MAX_TOTAL = 12 * 1024 * 1024;
 let bdFiles = [], bdCFiles = [];   // 글쓰기 첨부 · 댓글 이미지
@@ -3050,6 +3125,10 @@ $('bd-detail').addEventListener('change', e => {
 $('bd-detail').addEventListener('click', e => {
   const fx = e.target.closest('[data-bdf]');
   if (fx) { bdFiles.splice(+fx.dataset.bdf, 1); drawBdFiles(); return; }
+  const rxa = e.target.closest('[data-rxadd]');
+  if (rxa) { e.stopPropagation(); if ($('rx-pop')?.dataset.cid === rxa.dataset.rxadd) closeRx(); else openRx(rxa, rxa.dataset.rxadd); return; }
+  const rxc = e.target.closest('[data-rx]');
+  if (rxc) { boardDo({ action: 'react', id: boardId, cid: rxc.dataset.rxc || undefined, emoji: rxc.dataset.rx }); return; }
   const cfx = e.target.closest('[data-bdcf]');
   if (cfx) { bdCFiles.splice(+cfx.dataset.bdcf, 1); drawBdFiles('bd-cflist', bdCFiles); return; }
   const cx = e.target.closest('[data-bdc]');
@@ -3077,7 +3156,7 @@ $('bd-detail').addEventListener('click', e => {
       if (!t && !bdCFiles.length) break;
       b.disabled = true; b.textContent = bdCFiles.length ? '올리는 중…' : b.textContent;
       Promise.all(bdCFiles.map(async f => ({ name: f.name, data: await bdRead(f) })))
-        .then(files => boardDo({ action: 'comment', id: boardId, body: t, files }, () => { bdCFiles = []; }))
+        .then(files => boardDo({ action: 'comment', id: boardId, body: t, files }, () => { bdCFiles = []; $('bd-cmt').value = ''; }))
         .catch(err => alert(err.message))
         .finally(() => { const btn = document.querySelector('[data-bda="comment"]'); if (btn) { btn.disabled = false; btn.textContent = '등록'; } });
       break;

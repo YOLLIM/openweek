@@ -266,7 +266,7 @@ const server = http.createServer(async (req, res) => {
     // 문의 및 제안 게시판 (관리자만)
     if (P === '/api/board') {
       if (user.role !== 'admin') return sendJSON(res, 403, { error: '관리자만 사용할 수 있습니다.' });
-      if (M === 'GET') return sendJSON(res, 200, { posts: board.list(), categories: board.CATEGORIES, statuses: board.STATUSES });
+      if (M === 'GET') return sendJSON(res, 200, { posts: board.list(), categories: board.CATEGORIES, statuses: board.STATUSES, reactions: board.REACTIONS });
       const result = await board.act(user, await body(req), mailer.status().baseUrl);
       return sendJSON(res, 200, { ...result, posts: board.list() });
     }

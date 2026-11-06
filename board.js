@@ -17,6 +17,23 @@ const OTHER_TYPES = { '.pdf': 'application/pdf', '.txt': 'text/plain; charset=ut
   '.pptx': 'application/vnd.openxmlformats-officedocument.presentationml.presentation', '.ppt': 'application/vnd.ms-powerpoint', '.hwp': 'application/x-hwp', '.csv': 'text/csv; charset=utf-8' };
 const typeOf = name => { const ext = path.extname(name).toLowerCase(); return IMAGE_TYPES[ext] || OTHER_TYPES[ext] || 'application/octet-stream'; };
 const STATUSES = ['접수', '처리 중', '완료'];
+// 리액션(이모티콘): 이 목록에 있는 것만 받는다. [이모지, 검색어]
+const REACTIONS = [
+  ['기본', [['❤️', '하트 사랑 좋아요'], ['👍', '좋아요 최고 엄지'], ['✅', '확인 체크 완료'], ['😄', '웃음 기쁨'], ['😮', '놀람 와'], ['🥲', '감동 웃픔'],
+    ['😍', '하트눈 반함'], ['😆', '신남 웃음'], ['🥺', '부탁 애원'], ['😂', '웃김 눈물 ㅋㅋ'], ['🥳', '축하 파티'], ['🤔', '생각 고민 글쎄']]],
+  ['표정', [['😊', '미소 행복'], ['🙂', '미소'], ['😉', '윙크'], ['😎', '멋짐 선글라스'], ['🤩', '감탄 별눈'], ['😘', '뽀뽀'], ['😋', '맛있음 냠'],
+    ['😅', '머쓱 식은땀'], ['😢', '슬픔 눈물'], ['😭', '엉엉 울음'], ['😓', '난감 땀'], ['😥', '아쉬움'], ['😤', '씩씩 의욕'], ['😡', '화남 분노'],
+    ['😱', '충격 비명'], ['😴', '졸림 잠'], ['🤯', '머리 터짐 충격'], ['🥶', '추움'], ['🥵', '더움'], ['😇', '천사 착함'], ['😈', '악마 장난'],
+    ['🙄', '어이없음'], ['😬', '어색 이런'], ['🤗', '포옹 안아줘'], ['🤭', '웃음 참기'], ['🫡', '경례 충성 알겠습니다'], ['👀', '눈 보는중 확인중']]],
+  ['손', [['👌', '오케이 좋음'], ['👏', '박수 짝짝'], ['🙏', '감사 부탁 기도'], ['👋', '안녕 인사'], ['💪', '힘 화이팅'], ['🫶', '하트손 사랑'],
+    ['👎', '싫어요 별로'], ['✌️', '브이 승리'], ['🤝', '악수 협력'], ['🙌', '만세 환호'], ['☝️', '하나 잠깐'], ['🤞', '행운 기원']]],
+  ['하트', [['🧡', '주황 하트'], ['💛', '노랑 하트'], ['💚', '초록 하트'], ['💙', '파랑 하트'], ['💜', '보라 하트'], ['🖤', '검정 하트'], ['💔', '상처 하트 이별'], ['💯', '백점 완벽']]],
+  ['기타', [['🎉', '축하 폭죽'], ['🔥', '불 대박 열정'], ['⭐', '별 중요'], ['✨', '반짝'], ['🚀', '로켓 빠름 출시'], ['💡', '아이디어 전구'],
+    ['📌', '고정 중요 핀'], ['📝', '메모 기록'], ['⏰', '시간 알람 마감'], ['❓', '질문 물음표'], ['❗', '중요 느낌표'], ['⚠️', '주의 경고'],
+    ['🐛', '버그 오류'], ['🛠️', '수리 작업 수정'], ['☕', '커피 휴식'], ['🍀', '행운']]],
+];
+const REACTION_SET = new Set(REACTIONS.flatMap(([, list]) => list.map(([e]) => e)));
+const MAX_REACTION_KINDS = 20;
 
 function createBoard(dataDir, mailer, emailOf = () => '') {
   const FILE = path.join(dataDir, 'board.json');
@@ -113,6 +130,23 @@ function createBoard(dataDir, mailer, emailOf = () => '') {
         notifyComment(p, c, u, baseUrl);
         return { post: p };
       }
+      // 리액션 누르기 · 다시 누르면 취소 (글: cid 없음, 댓글: cid)
+      case 'react': {
+        const p = find(body.id);
+        const target = body.cid ? p.comments.find(x => x.id === body.cid) || fail('댓글을 찾을 수 없습니다.', 404) : p;
+        const e = String(body.emoji || '');
+        if (!REACTION_SET.has(e)) fail('쓸 수 없는 이모티콘입니다.');
+        const rs = target.reactions || (target.reactions = {});
+        const list = rs[e] || [];
+        if (list.some(x => x.empNo === u.empNo)) rs[e] = list.filter(x => x.empNo !== u.empNo);
+        else {
+          if (!rs[e] && Object.keys(rs).length >= MAX_REACTION_KINDS) fail(`이모티콘은 ${MAX_REACTION_KINDS}종류까지 달 수 있습니다.`);
+          rs[e] = [...list, { empNo: u.empNo, name: u.name }];
+        }
+        if (!rs[e].length) delete rs[e];
+        save();
+        return { post: p };
+      }
       case 'uncomment': {
         const p = find(body.id), c = p.comments.find(x => x.id === body.cid) || fail('댓글을 찾을 수 없습니다.', 404);
         if (c.by.empNo !== u.empNo && u.role !== 'admin') fail('본인 댓글만 지울 수 있습니다.', 403);
@@ -149,7 +183,7 @@ function createBoard(dataDir, mailer, emailOf = () => '') {
       default: fail('알 수 없는 작업');
     }
   }
-  return { list, act, file, NOTIFY_TO, CATEGORIES, STATUSES };
+  return { list, act, file, NOTIFY_TO, CATEGORIES, STATUSES, REACTIONS };
 }
 
 module.exports = { createBoard };
