@@ -140,28 +140,35 @@ function build(db, r, opts = {}) {
       return { data: `${IMG_MIME[m.ext]};base64,${buf.toString('base64')}`, size: imgSize(buf), name: m.name || '' };
     } catch { return null; }
   }).filter(Boolean);
-  // 그림 슬라이드: 한 장에 2개까지 나란히, 비율 유지
-  function imageSlides(title, name, imgs) {
-    const IMG_Y = 1.35, AREA_H = BODY_BOTTOM - IMG_Y - 0.1, GAP = 0.3;
-    const pagesN = Math.ceil(imgs.length / 2);
+  // 칸 안의 그림 배치: 글 아래에 한 줄에 2개씩 (미리보기와 같은 모양), 비율 유지
+  const IMG_GAP = 0.12, CELL_PAD_X = 0.1, CELL_PAD_TOP = 0.08;
+  const IMG_BOX_W = (BODY_W - CELL_PAD_X * 2 - IMG_GAP) / 2, IMG_BOX_H = 2.4;
+  const imgRowsOf = imgs => {
+    const rows = [];
     for (let i = 0; i < imgs.length; i += 2) {
-      const s = addSlide();
-      bar(s, 0.55);
-      heading(s, `${title} · ${name} 그림${pagesN > 1 ? ` (${i / 2 + 1}/${pagesN})` : ''}`, 0.72);
-      const pair = imgs.slice(i, i + 2), boxW = pair.length === 1 ? TW : (TW - GAP) / 2;
-      pair.forEach((im, j) => {
-        const sz = fit(im.size, boxW, AREA_H);
-        const x = X + j * (boxW + GAP) + (boxW - sz.w) / 2;
-        s.addImage({ data: im.data, x, y: IMG_Y, w: sz.w, h: sz.h, altText: im.name });
-      });
+      const items = imgs.slice(i, i + 2).map(im => ({ ...im, ...fit(im.size, IMG_BOX_W, IMG_BOX_H) }));
+      rows.push({ items, h: Math.max(...items.map(x => x.h)) + IMG_GAP });
     }
-  }
+    return rows;
+  };
 
   function textSlides(title, colTitle, entries, minRowH) {
-    // entries: [{ name, text, imgs }] → 슬라이드별로 행 배치 (긴 내용은 줄 단위로 나눠 다음 장으로), 그림은 이어지는 장에
+    // entries: [{ name, text, imgs }] → 슬라이드별로 행 배치. 긴 글은 줄 단위로, 그림은 줄(2개씩) 단위로 나눠 다음 장으로
     const pieces = [];
-    entries.forEach(e => splitText((e.text || '') + (e.imgs?.length ? `${(e.text || '').trim() ? '\n' : ''}[그림 ${e.imgs.length}장 · 이어지는 장 참조]` : ''), BODY_W - 0.25, maxRowH - PAD).forEach(c => pieces.push({ name: e.name, lines: c.lines, h: Math.max(minRowH, c.h + PAD) })));
-    if (!pieces.length) pieces.push({ name: '', lines: [''], h: minRowH });
+    entries.forEach(e => {
+      const text = e.text || '';
+      const chunks = text.trim() ? splitText(text, BODY_W - 0.25, maxRowH - PAD) : [{ lines: [], h: 0 }];
+      const mine = chunks.map(c => ({ name: e.name, lines: c.lines, textH: c.h, imgRows: [] }));
+      // 그림 줄은 마지막 조각 아래에 붙이고, 넘치면 같은 사업장 이름으로 새 조각
+      let last = mine[mine.length - 1];
+      for (const row of imgRowsOf(e.imgs || [])) {
+        const used = last.textH + last.imgRows.reduce((t, x) => t + x.h, 0);
+        if (used + row.h + PAD > maxRowH && (last.textH || last.imgRows.length)) { last = { name: e.name, lines: [], textH: 0, imgRows: [] }; mine.push(last); }
+        last.imgRows.push(row);
+      }
+      mine.forEach(p => { p.h = Math.max(minRowH, p.textH + p.imgRows.reduce((t, x) => t + x.h, 0) + PAD); pieces.push(p); });
+    });
+    if (!pieces.length) pieces.push({ name: '', lines: [''], textH: 0, imgRows: [], h: minRowH });
 
     const pages = [];
     let cur = [], used = 0;
@@ -181,11 +188,20 @@ function build(db, r, opts = {}) {
       const rows = [[{ text: '사업장', options: th }, { text: colTitle, options: th }]];
       page.forEach(p => rows.push([
         { text: p.name, options: { bold: true, align: 'center', valign: 'middle', border: BORDER, fontSize: 12 } },
-        { text: p.lines.join('\n'), options: { align: 'left', valign: 'top', border: BORDER, fontSize: TEXT_PT, margin: [0.08, 0.1, 0.08, 0.1] } },
+        { text: p.lines.join('\n'), options: { align: 'left', valign: 'top', border: BORDER, fontSize: TEXT_PT, margin: [CELL_PAD_TOP, CELL_PAD_X, 0.08, CELL_PAD_X] } },
       ]));
       s.addTable(rows, { x: X, y: TABLE_Y, w: TW, colW: [SITE_W, BODY_W], rowH: [HEAD_H, ...page.map(p => p.h)], fontFace: FONT, valign: 'top' });
+      // 그림: 그 행의 글 아래 자리에 올린다
+      let rowTop = TABLE_Y + HEAD_H;
+      page.forEach(p => {
+        let y = rowTop + CELL_PAD_TOP + p.textH + (p.textH ? 0.04 : 0);
+        p.imgRows.forEach(row => {
+          row.items.forEach((im, j) => s.addImage({ data: im.data, x: X + SITE_W + CELL_PAD_X + j * (IMG_BOX_W + IMG_GAP), y, w: im.w, h: im.h, altText: im.name }));
+          y += row.h;
+        });
+        rowTop += p.h;
+      });
     });
-    entries.forEach(e => { if (e.imgs?.length) imageSlides(title, e.name, e.imgs); });
   }
 
   db.groups.forEach((g, gi) => {
