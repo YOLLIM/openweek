@@ -11,10 +11,7 @@
   // 사업장별 글 항목: 2. 변경 및 신규 업무, 3. 장애 및 이슈 사항
   const KINDS = ['works', 'issues'];
   // 확정(잠금)된 보고서에서 막는 작업
-  const LOCKED_BLOCKS = ['report.date', 'report.period', 'report.cell', 'report.text', 'report.done', 'report.delete', 'report.img.add', 'report.img.del'];
-  // 2 · 3번 글 칸에 붙인 그림: r.imgs[kind][sid] = [{ id, ext, name, size, at, by }] (파일은 서버 data/report-img/보고서id/)
-  const MAX_REP_IMGS = 10;
-  const IMG_EXT = ['png', 'jpg', 'gif', 'webp'];
+  const LOCKED_BLOCKS = ['report.date', 'report.period', 'report.cell', 'report.text', 'report.done', 'report.delete'];
   const SETTING_KEYS = ['dept', 'company', 'author', 'title', 's1Title', 'footer', 'hideEmpty'];
 
   // ITOA 부문: 통합 유지보수 ITOA 서비스 주간 보고
@@ -277,7 +274,7 @@
   function swap(arr, i, j) { if (arr[i] && arr[j]) [arr[i], arr[j]] = [arr[j], arr[i]]; }
 
   // 사업장 칸을 고치는 작업 (sid 가 "사업장id" 또는 "사업장id:세부구분id")
-  const SITE_WRITE = ['report.cell', 'report.text', 'report.done', 'report.img.add', 'report.img.del'];
+  const SITE_WRITE = ['report.cell', 'report.text', 'report.done'];
   // 관리자이거나 그 사업장의 담당자면 작성 가능
   function canEditSite(db, who, sid) {
     if (who.role === 'admin') return true;
@@ -363,27 +360,6 @@
         const r = rep();
         if (!KINDS.includes(op.kind)) fail('알 수 없는 항목');
         (r[op.kind] ||= {})[op.sid] = String(op.value ?? ''); touch(r);
-        break;
-      }
-      case 'report.img.add': {
-        const r = rep();
-        if (!KINDS.includes(op.kind)) fail('알 수 없는 항목');
-        const m = op.img || {};
-        if (!isId(m.id) || !IMG_EXT.includes(m.ext)) fail('그림 정보가 올바르지 않습니다.');
-        const list = (((r.imgs ||= {})[op.kind] ||= {})[op.sid] ||= []);
-        if (list.length >= MAX_REP_IMGS) fail(`그림은 칸마다 ${MAX_REP_IMGS}개까지 붙일 수 있습니다.`);
-        if (!list.some(x => x.id === m.id)) list.push({ id: m.id, ext: m.ext, name: String(m.name || '그림').slice(0, 120), size: Number(m.size) || 0, at: op.ts || Date.now(), by: op.by || '' });
-        touch(r);
-        break;
-      }
-      case 'report.img.del': {
-        const r = rep();
-        if (!KINDS.includes(op.kind)) fail('알 수 없는 항목');
-        const list = r.imgs?.[op.kind]?.[op.sid];
-        if (!list?.some(x => x.id === op.img)) fail('그림을 찾을 수 없습니다. (이미 지워졌을 수 있음)');
-        r.imgs[op.kind][op.sid] = list.filter(x => x.id !== op.img);
-        if (!r.imgs[op.kind][op.sid].length) delete r.imgs[op.kind][op.sid];
-        touch(r);
         break;
       }
       case 'report.done': {
@@ -612,7 +588,7 @@
     }
   }
 
-  const api = { MAX_REP_IMGS, COLS, KINDS, ITOA_ROWS, uid, toISO, addDays, seed, siteHasData, workParts, worksText, subKey, canEditSite, canEditItoa, canEditItoaSite, itoaSiteLabel, normalizeItoa, itoaLines, itoaAttRows, itoaAttTotal, itoaV3, itoaSiteMissing, itoaView, itoaSitesView, itoaStateFor, ITOA_KINDS, itoaRate, itoaRowSum, itoaRowText, itoaTotals, apply };
+  const api = { COLS, KINDS, ITOA_ROWS, uid, toISO, addDays, seed, siteHasData, workParts, worksText, subKey, canEditSite, canEditItoa, canEditItoaSite, itoaSiteLabel, normalizeItoa, itoaLines, itoaAttRows, itoaAttTotal, itoaV3, itoaSiteMissing, itoaView, itoaSitesView, itoaStateFor, ITOA_KINDS, itoaRate, itoaRowSum, itoaRowText, itoaTotals, apply };
   if (typeof module === 'object' && module.exports) module.exports = api;
   else root.Ops = api;
 })(this);

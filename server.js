@@ -3,7 +3,6 @@ const http = require('http');
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
-const crypto = require('crypto');
 const Ops = require('./public/ops.js');
 const { buildBuffer: buildPptx } = require('./pptx.js');
 const { createAuth } = require('./auth.js');
@@ -18,15 +17,6 @@ const PORT = Number(process.env.PORT) || 3000;
 const PUBLIC_DIR = path.join(__dirname, 'public');
 const DATA_DIR = process.env.DATA_DIR ? path.resolve(process.env.DATA_DIR) : path.join(__dirname, 'data');
 const BACKUP_DIR = path.join(DATA_DIR, 'backup');
-// 보고서 2 · 3번 칸에 붙인 그림
-const REPORT_IMG_DIR = path.join(DATA_DIR, 'report-img');
-const MAX_REP_IMG = 5 * 1024 * 1024;
-const IMG_MIME = { png: 'image/png', jpg: 'image/jpeg', gif: 'image/gif', webp: 'image/webp' };
-// 파일 앞부분으로 형식 확인 (이름 · 형식 표시는 믿지 않는다)
-const imgExtOf = b => (b.length > 12 && b[0] === 0x89 && b.toString('latin1', 1, 4) === 'PNG' ? 'png'
-  : b.length > 3 && b[0] === 0xff && b[1] === 0xd8 && b[2] === 0xff ? 'jpg'
-  : b.length > 6 && /^GIF8[79]a$/.test(b.toString('latin1', 0, 6)) ? 'gif'
-  : b.length > 12 && b.toString('latin1', 0, 4) === 'RIFF' && b.toString('latin1', 8, 12) === 'WEBP' ? 'webp' : null);
 const DB_FILE = path.join(DATA_DIR, 'db.json');
 const MAX_BODY = 20 * 1024 * 1024;
 const MAX_LOGIN_BODY = 64 * 1024;   // 로그인 전에 받는 요청은 작게 제한한다
@@ -221,20 +211,6 @@ const server = http.createServer(async (req, res) => {
       return fs.createReadStream(f.path).pipe(res);
     }
 
-    // 보고서 2 · 3번에 붙인 그림: <img> 는 헤더를 못 보내므로 주소의 t(창 토큰)로도 확인
-    const rim = P.match(/^\/api\/report\/([\w-]+)\/img\/([a-f0-9]{12})$/);
-    if (rim && M === 'GET') {
-      const iu = user || auth.userOfToken(url.searchParams.get('t'));
-      if (!iu || iu.mustChange) return sendJSON(res, 401, { error: '로그인이 필요합니다.' });
-      if (!auth.deptsOf(iu).includes('net')) return sendJSON(res, 403, { error: '설정된 부문이 아니어서 열 수 없습니다.' });
-      const r = state.db.reports.find(x => x.id === rim[1]);
-      const meta = r && Ops.KINDS.flatMap(k => Object.values(r.imgs?.[k] || {}).flat()).find(x => x.id === rim[2]);
-      const file = meta && path.join(REPORT_IMG_DIR, r.id, `${meta.id}.${meta.ext}`);
-      if (!file || !fs.existsSync(file)) return sendJSON(res, 404, { error: '그림을 찾을 수 없습니다.' });
-      res.writeHead(200, { 'Content-Type': IMG_MIME[meta.ext], 'Cache-Control': 'private, max-age=86400', 'X-Content-Type-Options': 'nosniff' });
-      return fs.createReadStream(file).pipe(res);
-    }
-
     if (!user || user.mustChange) return sendJSON(res, 401, { error: '로그인이 필요합니다.' });
 
     if (P === '/api/avatar' && M === 'POST') {
@@ -280,44 +256,11 @@ const server = http.createServer(async (req, res) => {
       db.itoa = depts.includes('itoa') ? Ops.itoaStateFor(state.db, user) : { assignees: [], groups: [], sites: [], reports: [] };
       return sendJSON(res, 200, { version: state.version, db });
     }
-    // 보고서 2 · 3번 칸에 그림 붙이기 / 지우기 (파일 저장 후 작업으로 반영 → 다른 사용자 화면에도 바로 보임)
-    const rup = P.match(/^\/api\/report\/([\w-]+)\/img(\/del)?$/);
-    if (rup && M === 'POST') {
-      const b = await body(req);
-      const kind = String(b.kind || ''), sid = String(b.sid || '');
-      if (rup[2]) {
-        const img = String(b.img || '');
-        const r = state.db.reports.find(x => x.id === rup[1]);
-        const meta = r?.imgs?.[kind]?.[sid]?.find(x => x.id === img);
-        try { applyOp({ type: 'report.img.del', id: rup[1], kind, sid, img }, user); } catch (e) { return sendJSON(res, e.status || 500, { error: e.message, version: state.version }); }
-        if (meta) fs.rmSync(path.join(REPORT_IMG_DIR, rup[1], `${meta.id}.${meta.ext}`), { force: true });
-        return sendJSON(res, 200, { version: state.version });
-      }
-      const buf = Buffer.from(String(b.data || ''), 'base64');
-      const ext = imgExtOf(buf);
-      if (!ext) return sendJSON(res, 400, { error: '그림 파일(png · jpg · gif · webp)만 붙일 수 있습니다.' });
-      if (buf.length > MAX_REP_IMG) return sendJSON(res, 400, { error: '그림 하나는 5MB까지 붙일 수 있습니다.' });
-      const id = crypto.randomBytes(6).toString('hex');
-      const dir = path.join(REPORT_IMG_DIR, rup[1]);
-      if (!/^[\w-]{1,40}$/.test(rup[1]) || !state.db.reports.some(x => x.id === rup[1])) return sendJSON(res, 404, { error: '보고서를 찾을 수 없습니다.' });
-      fs.mkdirSync(dir, { recursive: true });
-      const file = path.join(dir, `${id}.${ext}`);
-      fs.writeFileSync(file, buf);
-      try { applyOp({ type: 'report.img.add', id: rup[1], kind, sid, img: { id, ext, name: String(b.name || '그림').slice(0, 120), size: buf.length } }, user); }
-      catch (e) { fs.rmSync(file, { force: true }); return sendJSON(res, e.status || 500, { error: e.message, version: state.version }); }
-      return sendJSON(res, 200, { version: state.version, id });
-    }
     if (P === '/api/op' && M === 'POST') {
       const op = await body(req);
-      // 그림 작업은 위 전용 주소로만 (파일과 기록이 어긋나지 않게)
-      if (/^report\.img\./.test(String(op.type || ''))) return sendJSON(res, 400, { error: '그림은 붙여넣기로만 추가 · 삭제할 수 있습니다.', version: state.version });
       if (op.type === 'import' && user.role !== 'admin') return sendJSON(res, 403, { error: '데이터 가져오기는 관리자만 할 수 있습니다.' });
       if (!depts.includes(String(op.type || '').startsWith('itoa.') ? 'itoa' : 'net')) return sendJSON(res, 403, { error: DEPT_DENY, version: state.version });
-      try {
-        const v = applyOp(op, user);
-        if (op.type === 'report.delete' && /^[\w-]{1,40}$/.test(String(op.id || ''))) fs.rmSync(path.join(REPORT_IMG_DIR, String(op.id)), { recursive: true, force: true });
-        return sendJSON(res, 200, { version: v });
-      } catch (e) { return sendJSON(res, e.status || 500, { error: e.message, version: state.version }); }
+      try { return sendJSON(res, 200, { version: applyOp(op, user) }); } catch (e) { return sendJSON(res, e.status || 500, { error: e.message, version: state.version }); }
     }
     // 담당자 지정 화면에서 쓰는 사용자 목록 (이름·사진만)
     // 문의 및 제안 게시판 (관리자만)

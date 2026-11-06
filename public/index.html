@@ -348,16 +348,6 @@
   #rx-pop .rx-grid button { border: 0; background: none; font-size: 22px; line-height: 1; padding: 6px 0; border-radius: 8px; cursor: pointer; }
   #rx-pop .rx-grid button:hover, #rx-pop .rx-grid button:focus-visible { background: #f3efe8; outline: none; }
   #rx-pop .rx-none { color: var(--muted); font-size: 13px; padding: 16px 4px; }
-  /* 보고서 2 · 3번 칸에 붙인 그림 */
-  .ri-list { display: flex; flex-wrap: wrap; gap: 10px; padding: 4px 12px 10px; }
-  .ri-list:empty { display: none; }
-  .ri { position: relative; display: inline-block; }
-  .ri img { display: block; max-width: 220px; max-height: 150px; border: 1px solid #ddd5c8; border-radius: 6px; background: #fff; cursor: zoom-in; }
-  .ri button { position: absolute; top: -7px; right: -7px; width: 22px; height: 22px; border-radius: 50%; border: 1px solid #ddd5c8; background: #fff; color: #b42318; font-size: 14px; line-height: 1; padding: 0; cursor: pointer; }
-  .ri-up { font-size: 12px; color: var(--muted); align-self: center; }
-  .ed-hint { font-weight: 400; font-size: 11px; color: var(--muted); }
-  .rpt-imgs { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; white-space: normal; }
-  .rpt-imgs img { max-width: 48%; max-height: 260px; border: 1px solid #ccc; }
   .bd-c-imgs { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
   .bd-c-imgs img { max-width: 220px; max-height: 160px; border: 1px solid #e5ddd0; border-radius: 8px; display: block; background: #fff; }
   .bd-c-side { display: flex; flex-direction: column; gap: 6px; }
@@ -1352,7 +1342,7 @@ function renderEditor() {
   updateTotals();
 
   // 2. 사업장별 변경/신규 업무
-  h = '<table class="ed"><thead><tr><th style="width:90px">구분</th><th style="width:90px">사업장</th><th>변경 / 신규 업무 <span class="ed-hint">(화면 캡처 · 그림은 칸에 Ctrl+V 로 붙여넣기)</span></th></tr></thead><tbody>';
+  h = '<table class="ed"><thead><tr><th style="width:90px">구분</th><th style="width:90px">사업장</th><th>변경 / 신규 업무</th></tr></thead><tbody>';
   // 2~4번 표에서 같이 쓰는 칸
   db.groups.forEach((g, gi) => {
     const gs = sites.filter(s => s.groupId === g.id);
@@ -1361,92 +1351,20 @@ function renderEditor() {
     rows.forEach(({ s, p }, i) => {
       const label = p.name ? `<span class="muted">${esc(s.name)}</span><br>${esc(p.name)}` : esc(s.name);
       h += '<tr>' + (i === 0 ? `<td class="lbl" rowspan="${rows.length}">2-${gi + 1}<br>${esc(g.name)}</td>` : '') + `<td class="lbl">${label}</td>` +
-        `<td><textarea data-kind="works" data-sid="${p.key}" placeholder="1. 작업 내용&#10;   - 세부 내용 – 9/26">${esc(p.text)}</textarea>${repImgs(r, 'works', p.key)}${prevBtn('works', p.key)}</td></tr>`;
+        `<td><textarea data-kind="works" data-sid="${p.key}" placeholder="1. 작업 내용&#10;   - 세부 내용 – 9/26">${esc(p.text)}</textarea>${prevBtn('works', p.key)}</td></tr>`;
     });
   });
   $('ed-works').innerHTML = h + '</tbody></table>';
 
   // 3. 사업장별 장애 및 이슈 사항
-  $('ed-issues').innerHTML = '<table class="ed"><thead><tr><th style="width:180px">사업장</th><th>장애 및 이슈 사항 <span class="ed-hint">(화면 캡처 · 그림은 칸에 Ctrl+V 로 붙여넣기)</span></th></tr></thead><tbody>' +
+  $('ed-issues').innerHTML = '<table class="ed"><thead><tr><th style="width:180px">사업장</th><th>장애 및 이슈 사항</th></tr></thead><tbody>' +
     sites.map(s => `<tr><td class="lbl"><span class="muted">${esc(groupName(s.groupId))}</span> ${esc(s.name)}</td>` +
-      `<td><textarea class="short" data-kind="issues" data-sid="${s.id}">${esc(r.issues[s.id] || '')}</textarea>${repImgs(r, 'issues', s.id)}${prevBtn('issues', s.id)}</td></tr>`).join('') + '</tbody></table>';
+      `<td><textarea class="short" data-kind="issues" data-sid="${s.id}">${esc(r.issues[s.id] || '')}</textarea>${prevBtn('issues', s.id)}</td></tr>`).join('') + '</tbody></table>';
 
   document.querySelectorAll('#ed-body textarea').forEach(autosize);
   applyLock(r);
   applySitePermission();
 }
-
-// ---------- 2 · 3번 칸 그림 ----------
-const repImgUrl = (r, m) => `/api/report/${r.id}/img/${m.id}?t=${encodeURIComponent(tabToken.get())}`;
-const repImgEditable = (r, sid) => !r.locked && (me?.role === 'admin' || canEdit(sid));
-function repImgs(r, kind, sid) {
-  const list = r.imgs?.[kind]?.[sid] || [], ed = repImgEditable(r, sid);
-  return `<div class="ri-list" data-ri="${kind}" data-ri-sid="${esc(sid)}">${list.map(m => `<span class="ri"><a href="${repImgUrl(r, m)}" target="_blank" rel="noopener" title="${esc(m.name)} · 새 창에서 크게 보기"><img src="${repImgUrl(r, m)}" alt="${esc(m.name)}" loading="lazy"></a>${ed ? `<button type="button" data-ridel="${m.id}" title="그림 지우기">×</button>` : ''}</span>`).join('')}</div>`;
-}
-const rptImgs = (r, kind, sid) => { const list = r.imgs?.[kind]?.[sid] || []; return list.length ? `<div class="rpt-imgs">${list.map(m => `<img src="${repImgUrl(r, m)}" alt="${esc(m.name)}">`).join('')}</div>` : ''; };
-// 큰 그림은 긴 변 2000px · JPEG 로 줄여서 올린다 (5MB 제한)
-async function shrinkImg(file) {
-  if (file.size <= 4 * 1024 * 1024 && file.type !== 'image/bmp') return file;
-  const bmp = await createImageBitmap(file);
-  const k = Math.min(1, 2000 / Math.max(bmp.width, bmp.height));
-  const c = document.createElement('canvas'); c.width = Math.round(bmp.width * k); c.height = Math.round(bmp.height * k);
-  c.getContext('2d').drawImage(bmp, 0, 0, c.width, c.height);
-  const blob = await new Promise(ok => c.toBlob(ok, 'image/jpeg', 0.85));
-  return new File([blob], file.name.replace(/\.\w+$/, '') + '.jpg', { type: 'image/jpeg' });
-}
-async function uploadRepImgs(t, files) {
-  const r = cur();
-  if (!r || t.readOnly) return;
-  const { kind, sid } = t.dataset;
-  const box = t.parentElement.querySelector('.ri-list');
-  let up;
-  if (box) { up = document.createElement('span'); up.className = 'ri-up'; up.textContent = '그림 올리는 중…'; box.appendChild(up); box.style.display = 'flex'; }
-  setStatus('그림 올리는 중…');
-  try {
-    for (const f0 of files) {
-      const f = await shrinkImg(f0);
-      const data = await new Promise((ok, no) => { const fr = new FileReader(); fr.onload = () => ok(String(fr.result).split(',')[1] || ''); fr.onerror = () => no(new Error('그림을 읽지 못했습니다.')); fr.readAsDataURL(f); });
-      const res = await fetch(`/api/report/${r.id}/img`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ kind, sid, name: f.name, data }) });
-      const j = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(j.error || '그림을 올리지 못했습니다.');
-    }
-  } catch (e) { alert(e.message); }
-  up?.remove();
-  flushDirty();
-  await refresh(true);
-  setStatus('저장됨 ' + new Date().toLocaleTimeString());
-}
-const pastedImages = dt => [...(dt?.files || [])].filter(f => /^image\/(png|jpeg|gif|webp|bmp)$/.test(f.type))
-  .map((f, i) => (f.name && f.name !== 'image.png' ? f : new File([f], `캡처_${new Date().toISOString().slice(0, 19).replace(/[-:T]/g, '')}${i ? '_' + i : ''}.${(f.type.split('/')[1] || 'png').replace('jpeg', 'jpg')}`, { type: f.type })));
-// 2 · 3번 칸: 붙여넣기 · 끌어다 놓기로 그림 추가
-$('ed-body').addEventListener('paste', e => {
-  const t = e.target;
-  if (!t.matches?.('textarea[data-kind="works"], textarea[data-kind="issues"]')) return;
-  const imgs = pastedImages(e.clipboardData);
-  if (!imgs.length) return;
-  e.preventDefault();
-  if (t.readOnly) return alert(cur()?.locked ? '확정된 보고서에는 그림을 붙일 수 없습니다.' : '담당 사업장이 아니어서 그림을 붙일 수 없습니다.');
-  uploadRepImgs(t, imgs);
-});
-$('ed-body').addEventListener('dragover', e => { if (e.target.matches?.('textarea[data-kind="works"], textarea[data-kind="issues"]') && [...(e.dataTransfer?.items || [])].some(i => i.kind === 'file')) e.preventDefault(); });
-$('ed-body').addEventListener('drop', e => {
-  const t = e.target;
-  if (!t.matches?.('textarea[data-kind="works"], textarea[data-kind="issues"]')) return;
-  const imgs = pastedImages(e.dataTransfer);
-  if (!imgs.length) return;
-  e.preventDefault();
-  if (!t.readOnly) uploadRepImgs(t, imgs);
-});
-$('ed-body').addEventListener('click', async e => {
-  const b = e.target.closest('[data-ridel]');
-  if (!b) return;
-  const box = b.closest('.ri-list'), r = cur();
-  if (!r || !confirm('이 그림을 지울까요?')) return;
-  const res = await fetch(`/api/report/${r.id}/img/del`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ kind: box.dataset.ri, sid: box.dataset.riSid, img: b.dataset.ridel }) });
-  const j = await res.json().catch(() => ({}));
-  if (!res.ok) alert(j.error || '지우지 못했습니다.');
-  await refresh(true);
-});
 
 function updateTotals() {
   const r = cur();
@@ -2393,18 +2311,18 @@ function renderPreview() {
   // 2-N: 회사별 변경 및 신규 업무
   db.groups.forEach((g, gi) => {
     // 세부 구분이 있는 사업장은 구분 이름으로 줄을 나눈다 (예: 본사 → DKS / DKCM / DKHD)
-    let rowsData = sites.filter(s => s.groupId === g.id).flatMap(s => Ops.workParts(r, s).map(p => ({ name: p.name || s.name, text: p.text, key: p.key })));
-    if (S.hideEmpty) rowsData = rowsData.filter(x => x.text.trim() || r.imgs?.works?.[x.key]?.length);
+    let rowsData = sites.filter(s => s.groupId === g.id).flatMap(s => Ops.workParts(r, s).map(p => ({ name: p.name || s.name, text: p.text })));
+    if (S.hideEmpty) rowsData = rowsData.filter(x => x.text.trim());
     if (!rowsData.length) return;
-    const rows = rowsData.map(x => `<tr><td class="site">${esc(x.name)}</td><td class="body">${esc(x.text)}${rptImgs(r, 'works', x.key)}</td></tr>`).join('');
+    const rows = rowsData.map(x => `<tr><td class="site">${esc(x.name)}</td><td class="body">${esc(x.text)}</td></tr>`).join('');
     pages.push({ html: `<div class="bar"></div><div class="rpt-sub">2-${gi + 1}. ${esc(g.name)} 변경 및 신규 업무</div>
       <table class="rpt text"><thead><tr><th>사업장</th><th>변경 / 신규 업무</th></tr></thead><tbody>${rows}</tbody></table>` });
   });
 
   // 3. 장애 및 이슈
-  const iss = sites.filter(s => (r.issues[s.id] || '').trim() || r.imgs?.issues?.[s.id]?.length);
+  const iss = sites.filter(s => (r.issues[s.id] || '').trim());
   const irows = iss.length
-    ? iss.map(s => `<tr><td class="site">${esc(s.name)}</td><td class="body" style="height:auto">${esc(r.issues[s.id] || '')}${rptImgs(r, 'issues', s.id)}</td></tr>`).join('')
+    ? iss.map(s => `<tr><td class="site">${esc(s.name)}</td><td class="body" style="height:auto">${esc(r.issues[s.id])}</td></tr>`).join('')
     : '<tr><td class="site"></td><td class="body"></td></tr>';
   pages.push({ html: `<div class="bar"></div><div class="rpt-sub">3. 장애 및 이슈 사항</div>
     <table class="rpt text"><thead><tr><th>사업장</th><th>장애 및 이슈 사항</th></tr></thead><tbody>${irows}</tbody></table>` });
