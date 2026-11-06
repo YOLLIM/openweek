@@ -1,8 +1,6 @@
 // 월간보고: 한 달 동안의 주간보고를 합치고, 엑셀로 내보낸다.
 const ExcelJS = require('exceljs');
-const fs = require('fs');
 const Ops = require('./public/ops.js');
-const { imgSize, fit } = require('./imgsize.js');
 
 const KIND_NAME = { works: '변경 및 신규 업무', issues: '장애 및 이슈 사항' };
 
@@ -20,7 +18,7 @@ function orderedSites(db) {
 function mergeMonth(db, month) {
   const reps = monthReports(db, month);
   if (!reps.length) return null;
-  const m = { id: 'month-' + month, date: reps[reps.length - 1].date, start: reps[0].start, end: reps[reps.length - 1].end, stats: {}, works: {}, issues: {}, imgs: { works: {}, issues: {} } };
+  const m = { id: 'month-' + month, date: reps[reps.length - 1].date, start: reps[0].start, end: reps[reps.length - 1].end, stats: {}, works: {}, issues: {} };
   for (const s of db.sites) {
     for (const c of Ops.COLS) {
       const vals = reps.map(r => r.stats[s.id]?.[c.key]).filter(v => v !== '' && v != null);
@@ -32,16 +30,13 @@ function mergeMonth(db, month) {
       for (const key of list) {
         const parts = reps.filter(r => (r[k]?.[key] || '').trim()).map(r => `[${weekTag(r)}]\n${r[k][key].replace(/\s+$/, '')}`);
         if (parts.length) m[k][key] = parts.join('\n');
-        const imgs = reps.flatMap(r => (r.imgs?.[k]?.[key] || []).map(x => ({ ...x, rid: r.id })));
-        if (imgs.length) m.imgs[k][key] = imgs;
       }
     }
   }
   return { merged: m, reports: reps };
 }
 
-// imgFile(보고서id, 그림정보) → 그림 파일 경로. 글 항목 시트의 그림 열에 작게 넣는다
-async function monthXlsx(db, month, imgFile) {
+async function monthXlsx(db, month) {
   const reps = monthReports(db, month);
   const sites = orderedSites(db).filter(s => s.active || reps.some(r => Ops.siteHasData(r, s.id)));
   const wb = new ExcelJS.Workbook();
@@ -83,34 +78,14 @@ async function monthXlsx(db, month, imgFile) {
   // 3~4) 글 항목: 한 줄에 한 항목
   for (const k of ['works', 'issues']) {
     const ws = wb.addWorksheet(KIND_NAME[k]);
-    ws.columns = [{ header: '보고일', width: 12 }, { header: '기간', width: 14 }, { header: '회사', width: 12 }, { header: '사업장', width: 12 }, { header: KIND_NAME[k], width: 100 }, { header: '그림', width: 30 }];
-    let maxImgs = 0;
+    ws.columns = [{ header: '보고일', width: 12 }, { header: '기간', width: 14 }, { header: '회사', width: 12 }, { header: '사업장', width: 12 }, { header: KIND_NAME[k], width: 100 }];
     for (const r of reps) for (const s of sites) {
       const t = (k === 'works' ? Ops.worksText(r, s) : r[k]?.[s.id] || '').replace(/\s+$/, '');
-      // 이 사업장 칸(세부 구분 포함)에 붙인 그림
-      const keys = k === 'works' ? [s.id, ...(s.subs || []).map(sb => Ops.subKey(s.id, sb.id))] : [s.id];
-      const imgs = keys.flatMap(key => r.imgs?.[k]?.[key] || []);
-      if (!t.trim() && !imgs.length) continue;
+      if (!t.trim()) continue;
       const row = ws.addRow([r.date, weekTag(r), s.group, s.name, t]);
       row.getCell(5).alignment = { wrapText: true, vertical: 'top' };
-      let hPt = Math.min(400, 16 * t.split('\n').length + 4);
-      let placed = 0;
-      for (const m of imgs) {
-        try {
-          const f = imgFile && imgFile(r.id, m);
-          if (!f || !['png', 'jpg', 'gif'].includes(m.ext)) continue;
-          const buf = fs.readFileSync(f);
-          const sz = fit(imgSize(buf), 200, 130);
-          const id = wb.addImage({ buffer: buf, extension: m.ext === 'jpg' ? 'jpeg' : m.ext });
-          ws.addImage(id, { tl: { col: 5 + placed, row: row.number - 1 + 0.05 }, ext: { width: sz.w, height: sz.h } });
-          hPt = Math.max(hPt, sz.h * 0.75 + 8);
-          placed++;
-        } catch { /* 읽을 수 없는 그림은 건너뜀 */ }
-      }
-      maxImgs = Math.max(maxImgs, placed);
-      row.height = hPt;
+      row.height = Math.min(400, 16 * t.split('\n').length + 4);
     }
-    for (let i = 1; i < maxImgs; i++) ws.getColumn(6 + i).width = 30;
     head(ws); border(ws);
   }
   return wb.xlsx.writeBuffer();

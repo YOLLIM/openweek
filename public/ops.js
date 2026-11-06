@@ -372,7 +372,7 @@
         if (!isId(m.id) || !IMG_EXT.includes(m.ext)) fail('그림 정보가 올바르지 않습니다.');
         const list = (((r.imgs ||= {})[op.kind] ||= {})[op.sid] ||= []);
         if (list.length >= MAX_REP_IMGS) fail(`그림은 칸마다 ${MAX_REP_IMGS}개까지 붙일 수 있습니다.`);
-        if (!list.some(x => x.id === m.id)) list.push({ id: m.id, ext: m.ext, name: String(m.name || '그림').slice(0, 120), size: Number(m.size) || 0, at: op.ts || Date.now(), by: op.by || '', ...(isId(m.src) ? { src: m.src } : {}) });
+        if (!list.some(x => x.id === m.id)) list.push({ id: m.id, ext: m.ext, name: String(m.name || '그림').slice(0, 120), size: Number(m.size) || 0, at: op.ts || Date.now(), by: op.by || '' });
         touch(r);
         break;
       }
