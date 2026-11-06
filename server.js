@@ -22,6 +22,7 @@ const BACKUP_DIR = path.join(DATA_DIR, 'backup');
 const REPORT_IMG_DIR = path.join(DATA_DIR, 'report-img');
 const MAX_REP_IMG = 5 * 1024 * 1024;
 const IMG_MIME = { png: 'image/png', jpg: 'image/jpeg', gif: 'image/gif', webp: 'image/webp' };
+const repImgFile = (rid, m) => (/^[\w-]{1,40}$/.test(String(rid)) && /^[a-f0-9]{12}$/.test(String(m?.id)) ? path.join(REPORT_IMG_DIR, String(rid), `${m.id}.${m.ext}`) : null);
 // 파일 앞부분으로 형식 확인 (이름 · 형식 표시는 믿지 않는다)
 const imgExtOf = b => (b.length > 12 && b[0] === 0x89 && b.toString('latin1', 1, 4) === 'PNG' ? 'png'
   : b.length > 3 && b[0] === 0xff && b[1] === 0xd8 && b[2] === 0xff ? 'jpg'
@@ -281,6 +282,28 @@ const server = http.createServer(async (req, res) => {
       return sendJSON(res, 200, { version: state.version, db });
     }
     // 보고서 2 · 3번 칸에 그림 붙이기 / 지우기 (파일 저장 후 작업으로 반영 → 다른 사용자 화면에도 바로 보임)
+    // 전주 불러오기: 지난 보고서 같은 칸의 그림을 이 보고서로 복사 (이미 복사한 그림은 건너뜀)
+    const rcp = P.match(/^\/api\/report\/([\w-]+)\/img\/copy$/);
+    if (rcp && M === 'POST') {
+      const b = await body(req);
+      const kind = String(b.kind || ''), sid = String(b.sid || '');
+      const to = state.db.reports.find(x => x.id === rcp[1]), from = state.db.reports.find(x => x.id === String(b.from || ''));
+      if (!to || !from || from.id === to.id) return sendJSON(res, 404, { error: '보고서를 찾을 수 없습니다.' });
+      const have = new Set((to.imgs?.[kind]?.[sid] || []).flatMap(x => [x.id, x.src]).filter(Boolean));
+      let copied = 0, skipped = 0;
+      for (const m of from.imgs?.[kind]?.[sid] || []) {
+        if (have.has(m.id) || (m.src && have.has(m.src))) { skipped++; continue; }
+        const src = repImgFile(from.id, m);
+        if (!src || !fs.existsSync(src)) { skipped++; continue; }
+        const id = crypto.randomBytes(6).toString('hex');
+        fs.mkdirSync(path.join(REPORT_IMG_DIR, to.id), { recursive: true });
+        const dst = path.join(REPORT_IMG_DIR, to.id, `${id}.${m.ext}`);
+        fs.copyFileSync(src, dst);
+        try { applyOp({ type: 'report.img.add', id: to.id, kind, sid, img: { id, ext: m.ext, name: m.name, size: m.size, src: m.src || m.id } }, user); copied++; }
+        catch (e) { fs.rmSync(dst, { force: true }); if (!copied) return sendJSON(res, e.status || 500, { error: e.message, version: state.version }); break; }
+      }
+      return sendJSON(res, 200, { version: state.version, copied, skipped });
+    }
     const rup = P.match(/^\/api\/report\/([\w-]+)\/img(\/del)?$/);
     if (rup && M === 'POST') {
       const b = await body(req);
@@ -361,11 +384,11 @@ const server = http.createServer(async (req, res) => {
       const month = url.searchParams.get('month') || '';
       if (!/^\d{4}-\d{2}$/.test(month)) return sendJSON(res, 400, { error: '월을 선택하세요.' });
       const title = `월간업무보고_${month}`;
-      if (mm[1] === 'xlsx') return sendFile(res, title + '.xlsx', XLSX_TYPE, await monthXlsx(state.db, month));
+      if (mm[1] === 'xlsx') return sendFile(res, title + '.xlsx', XLSX_TYPE, await monthXlsx(state.db, month, repImgFile));
       const mg = mergeMonth(state.db, month);
       if (!mg) return sendJSON(res, 404, { error: '해당 월의 주간보고가 없습니다.' });
       const [y, mo] = month.split('-');
-      const buf = await buildPptx(state.db, mg.merged, { title: '월간업무보고', dateLabel: `${y}/${mo}`, periodLabel: `${mg.merged.start.slice(5).replace('-', '/')} ~ ${mg.merged.end.slice(5).replace('-', '/')} (주간보고 ${mg.reports.length}건)` });
+      const buf = await buildPptx(state.db, mg.merged, { imgFile: repImgFile, title: '월간업무보고', dateLabel: `${y}/${mo}`, periodLabel: `${mg.merged.start.slice(5).replace('-', '/')} ~ ${mg.merged.end.slice(5).replace('-', '/')} (주간보고 ${mg.reports.length}건)` });
       return sendFile(res, title + '.pptx', PPTX_TYPE, buf);
     }
     if (P === '/api/check/rules' && M === 'GET') return sendJSON(res, 200, { rules: ruleGuide() });
@@ -483,7 +506,7 @@ const server = http.createServer(async (req, res) => {
     if (pm && M === 'GET') {
       const r = state.db.reports.find(x => x.id === pm[1]);
       if (!r) return sendJSON(res, 404, { error: '보고서를 찾을 수 없습니다.' });
-      const buf = await buildPptx(state.db, r);
+      const buf = await buildPptx(state.db, r, { imgFile: repImgFile });
       const fname = `${state.db.settings.title || '주간업무보고'}_${r.date}.pptx`;
       res.writeHead(200, {
         'Content-Type': 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
