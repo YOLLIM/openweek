@@ -1424,7 +1424,9 @@ async function uploadRepImgs(t, files) {
   await refresh(true);
   setStatus('저장됨 ' + new Date().toLocaleTimeString());
 }
-const pastedImages = dt => [...(dt?.files || [])].filter(f => /^image\/(png|jpeg|gif|webp|bmp)$/.test(f.type))
+// 클립보드 그림: files 가 비어 있고 items 에만 그림이 있는 경우(엑셀 · 메신저 등에서 복사)도 읽는다
+const clipFiles = dt => { const fs = [...(dt?.files || [])]; return fs.length ? fs : [...(dt?.items || [])].filter(i => i.kind === 'file').map(i => i.getAsFile()).filter(Boolean); };
+const pastedImages = dt => clipFiles(dt).filter(f => /^image\/(png|jpeg|gif|webp|bmp)$/.test(f.type))
   .map((f, i) => (f.name && f.name !== 'image.png' ? f : new File([f], `캡처_${new Date().toISOString().slice(0, 19).replace(/[-:T]/g, '')}${i ? '_' + i : ''}.${(f.type.split('/')[1] || 'png').replace('jpeg', 'jpg')}`, { type: f.type })));
 // 2 · 3번 칸: 붙여넣기 · 끌어다 놓기로 그림 추가
 $('ed-body').addEventListener('paste', e => {
