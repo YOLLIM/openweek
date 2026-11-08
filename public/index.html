@@ -993,6 +993,7 @@
           <select id="bd-cat"><option value="">구분 전체</option><option>문의</option><option>개선 제안</option></select>
           <select id="bd-st"><option value="">상태 전체</option><option>접수</option><option>처리 중</option><option>완료</option></select>
           <span class="spacer" style="flex:1"></span>
+          <button id="bd-trash" title="지운 글은 30일 동안 여기에 보관되고, 되살릴 수 있습니다">🗑 휴지통</button>
           <button class="teal" id="bd-new"><svg class="i"><use href="#i-plus"/></svg>글쓰기</button>
         </div>
         <div class="st-wrap"><table class="st bd-table" id="bd-table"></table></div>
@@ -3040,12 +3041,13 @@ function renderItoaPreview() {
 }
 
 // ---------- 문의 및 제안 게시판 ----------
-let boardPosts = [], boardMode = 'list', boardId = null;   // boardMode: list · read · write · edit
+let boardPosts = [], boardTrash = [], boardMode = 'list', boardId = null;   // boardMode: list · read · write · edit · trash
 async function boardApi(body) {
   const res = await fetch('/api/board', body ? { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) } : { cache: 'no-store' });
   const j = await res.json();
   if (!res.ok) throw new Error(j.error);
   boardPosts = j.posts || [];
+  boardTrash = j.trash || [];
   if (j.reactions) bdReactions = j.reactions;
   return j;
 }
@@ -3061,6 +3063,19 @@ function drawBoard() {
   const keepCmt = $('bd-cmt') && boardMode === 'read' ? { id: boardId, v: $('bd-cmt').value } : null;
   $('bd-list-wrap').classList.toggle('hidden', boardMode !== 'list');
   $('bd-detail').classList.toggle('hidden', boardMode === 'list');
+  $('bd-trash').textContent = `🗑 휴지통${boardTrash.length ? ` (${boardTrash.length})` : ''}`;
+  if (boardMode === 'trash') {
+    const days = t => Math.max(0, Math.ceil((t - Date.now()) / 86400000));
+    $('bd-detail').innerHTML = `<div class="st-card bd-read">
+      <div class="bd-read-h"><button type="button" class="sm" data-bda="back">← 목록</button><b style="margin-left:6px">휴지통</b>
+        <span class="muted" style="margin-left:8px">지운 글은 ${30}일 동안 보관되고, 그 뒤 첨부파일과 함께 자동으로 영구 삭제됩니다.</span></div>
+      <table class="st bd-table" style="margin-top:12px"><tr><th style="width:60px">번호</th><th>제목</th><th style="width:100px">작성자</th><th style="width:100px">지운 사람</th><th style="width:150px">지운 시각</th><th style="width:90px">남은 기간</th><th style="width:170px"></th></tr>
+      ${boardTrash.length ? boardTrash.map(p => `<tr><td>${p.no}</td><td class="bd-title"><b>${esc(p.title)}</b>${p.files?.length ? ` <span class="bd-cmt">📎 ${p.files.length}</span>` : ''}${p.comments.length ? ` <span class="bd-cmt">💬 ${p.comments.length}</span>` : ''}<div class="muted" style="white-space:pre-wrap;max-height:60px;overflow:hidden">${esc(p.body.slice(0, 200))}</div></td>
+        <td>${esc(p.by.name)}</td><td>${esc(p.deleted.by?.name || '')}</td><td class="muted">${bdDate(p.deleted.at)}</td><td>${days(p.purgeAt)}일</td>
+        <td style="white-space:nowrap;text-align:right"><button type="button" class="sm teal" data-bdrestore="${p.id}">되살리기</button> <button type="button" class="sm danger" data-bdpurge="${p.id}">영구 삭제</button></td></tr>`).join('')
+        : '<tr><td colspan="7" class="muted" style="text-align:center;padding:30px">휴지통이 비어 있습니다.</td></tr>'}</table></div>`;
+    return;
+  }
   if (boardMode === 'list') {
     const q = $('bd-q').value.trim().toLowerCase(), cat = $('bd-cat').value, st = $('bd-st').value;
     const rows = boardPosts.filter(p => (!cat || p.category === cat) && (!st || p.status === st) && (!q || `${p.title} ${p.body} ${p.by.name}`.toLowerCase().includes(q)));
@@ -3228,6 +3243,7 @@ $('bd-table').addEventListener('click', e => {
 });
 ['bd-q', 'bd-cat', 'bd-st'].forEach(id => $(id).addEventListener(id === 'bd-q' ? 'input' : 'change', drawBoard));
 $('bd-new').onclick = () => { boardMode = 'write'; bdFiles = []; drawBoard(); };
+$('bd-trash').onclick = () => { boardMode = 'trash'; drawBoard(); window.scrollTo(0, 0); };
 $('bd-detail').addEventListener('change', e => {
   if (e.target.id === 'bd-status') boardDo({ action: 'status', id: boardId, status: e.target.value });
 });
@@ -3238,6 +3254,10 @@ $('bd-detail').addEventListener('click', e => {
   if (rxa) { e.stopPropagation(); if ($('rx-pop')?.dataset.cid === rxa.dataset.rxadd) closeRx(); else openRx(rxa, rxa.dataset.rxadd); return; }
   const rxc = e.target.closest('[data-rx]');
   if (rxc) { boardDo({ action: 'react', id: boardId, cid: rxc.dataset.rxc || undefined, emoji: rxc.dataset.rx }); return; }
+  const rs = e.target.closest('[data-bdrestore]');
+  if (rs) { const p = boardTrash.find(x => x.id === rs.dataset.bdrestore); if (p && confirm(`${p.no}번 글 "${p.title}"을(를) 되살릴까요?`)) boardDo({ action: 'restore', id: p.id }, () => { boardId = p.id; boardMode = 'read'; }); return; }
+  const pg = e.target.closest('[data-bdpurge]');
+  if (pg) { const p = boardTrash.find(x => x.id === pg.dataset.bdpurge); if (p && confirm(`${p.no}번 글 "${p.title}"을(를) 영구 삭제할까요?\n첨부파일까지 지워지며 되살릴 수 없습니다.`)) boardDo({ action: 'purge', id: p.id }); return; }
   const cfx = e.target.closest('[data-bdcf]');
   if (cfx) { bdCFiles.splice(+cfx.dataset.bdcf, 1); drawBdFiles('bd-cflist', bdCFiles); return; }
   const cx = e.target.closest('[data-bdc]');
@@ -3259,7 +3279,7 @@ $('bd-detail').addEventListener('click', e => {
       break;
     case 'save': boardDo({ action: 'edit', id: boardId, ...form() }, () => { boardMode = 'read'; }); break;
     case 'edit': boardMode = 'edit'; drawBoard(); break;
-    case 'delete': if (confirm('이 글을 삭제할까요? 댓글도 함께 지워집니다.')) boardDo({ action: 'delete', id: boardId }, () => { boardMode = 'list'; }); break;
+    case 'delete': if (confirm('이 글을 삭제할까요?\n휴지통으로 옮겨지며, 30일 안에 [휴지통]에서 되살릴 수 있습니다.')) boardDo({ action: 'delete', id: boardId }, () => { boardMode = 'list'; }); break;
     case 'comment': {
       const t = $('bd-cmt').value.trim();
       if (!t && !bdCFiles.length) break;

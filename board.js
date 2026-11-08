@@ -17,6 +17,8 @@ const OTHER_TYPES = { '.pdf': 'application/pdf', '.txt': 'text/plain; charset=ut
   '.pptx': 'application/vnd.openxmlformats-officedocument.presentationml.presentation', '.ppt': 'application/vnd.ms-powerpoint', '.hwp': 'application/x-hwp', '.csv': 'text/csv; charset=utf-8' };
 const typeOf = name => { const ext = path.extname(name).toLowerCase(); return IMAGE_TYPES[ext] || OTHER_TYPES[ext] || 'application/octet-stream'; };
 const STATUSES = ['접수', '처리 중', '완료'];
+// 지운 글은 휴지통에 30일 보관 후 영구 삭제
+const TRASH_DAYS = 30;
 // 리액션(이모티콘): 이 목록에 있는 것만 받는다. [이모지, 검색어]
 const REACTIONS = [
   ['기본', [['❤️', '하트 사랑 좋아요'], ['👍', '좋아요 최고 엄지'], ['✅', '확인 체크 완료'], ['😄', '웃음 기쁨'], ['😮', '놀람 와'], ['🥲', '감동 웃픔'],
@@ -42,7 +44,8 @@ function createBoard(dataDir, mailer, emailOf = () => '') {
   const save = () => { fs.writeFileSync(FILE + '.tmp', JSON.stringify({ posts }, null, 1)); fs.renameSync(FILE + '.tmp', FILE); };
   const fail = (msg, status = 400) => { const e = new Error(msg); e.status = status; throw e; };
   const text = (v, max, label) => { const t = String(v ?? '').trim(); if (!t) fail(`${label}을(를) 입력하세요.`); return t.slice(0, max); };
-  const find = id => posts.find(p => p.id === id) || fail('글을 찾을 수 없습니다. (삭제되었을 수 있음)', 404);
+  const find = id => posts.find(p => p.id === id && !p.deleted) || fail('글을 찾을 수 없습니다. (삭제되었을 수 있음)', 404);
+  const findTrash = id => posts.find(p => p.id === id && p.deleted) || fail('휴지통에 없는 글입니다.', 404);
   const newId = () => crypto.randomBytes(6).toString('hex');
   const author = u => ({ empNo: u.empNo, name: u.name });
   const mine = (p, u) => p.by.empNo === u.empNo || u.role === 'admin';
@@ -94,7 +97,21 @@ function createBoard(dataDir, mailer, emailOf = () => '') {
   }
 
   // 목록: 최신 글부터
-  const list = () => posts.slice().sort((a, b) => b.at - a.at);
+  const list = () => posts.filter(p => !p.deleted).sort((a, b) => b.at - a.at);
+  // 휴지통: 지운 순서대로, 영구 삭제 예정일 포함
+  const trash = () => posts.filter(p => p.deleted).sort((a, b) => b.deleted.at - a.deleted.at).map(p => ({ ...p, purgeAt: p.deleted.at + TRASH_DAYS * 86400000 }));
+  // 보관 기간이 지난 글은 첨부파일과 함께 영구 삭제
+  function purgeOld() {
+    const limit = Date.now() - TRASH_DAYS * 86400000;
+    const old = posts.filter(p => p.deleted && p.deleted.at < limit);
+    if (!old.length) return;
+    posts = posts.filter(p => !old.includes(p));
+    save();
+    old.forEach(p => fs.rmSync(fileDir(p.id), { recursive: true, force: true }));
+    console.log(`[문의 및 제안] 휴지통 ${TRASH_DAYS}일 지난 글 ${old.length}개 영구 삭제`);
+  }
+  purgeOld();
+  setInterval(purgeOld, 6 * 3600 * 1000).unref();
 
   async function act(u, body, baseUrl) {
     switch (body.action) {
@@ -173,17 +190,35 @@ function createBoard(dataDir, mailer, emailOf = () => '') {
         return { post: p };
       }
       case 'delete': {
+        // 바로 지우지 않고 휴지통으로 (첨부파일 · 댓글 그대로 보관)
         const p = find(body.id);
         if (!mine(p, u)) fail('본인 글이나 관리자만 지울 수 있습니다.', 403);
+        p.deleted = { by: author(u), at: Date.now() };
+        save();
+        console.log(`[문의 및 제안] ${u.name} 이(가) ${p.no}번 글을 휴지통으로 옮김: ${p.title}`);
+        return { ok: true };
+      }
+      case 'restore': {
+        if (u.role !== 'admin') fail('휴지통은 관리자만 사용할 수 있습니다.', 403);
+        const p = findTrash(body.id);
+        delete p.deleted;
+        save();
+        console.log(`[문의 및 제안] ${u.name} 이(가) ${p.no}번 글을 되살림: ${p.title}`);
+        return { post: p };
+      }
+      case 'purge': {
+        if (u.role !== 'admin') fail('휴지통은 관리자만 사용할 수 있습니다.', 403);
+        const p = findTrash(body.id);
         posts = posts.filter(x => x !== p);
         save();
         fs.rmSync(fileDir(p.id), { recursive: true, force: true });   // 첨부파일도 함께
+        console.log(`[문의 및 제안] ${u.name} 이(가) ${p.no}번 글을 영구 삭제: ${p.title}`);
         return { ok: true };
       }
       default: fail('알 수 없는 작업');
     }
   }
-  return { list, act, file, NOTIFY_TO, CATEGORIES, STATUSES, REACTIONS };
+  return { list, trash, act, file, NOTIFY_TO, CATEGORIES, STATUSES, REACTIONS };
 }
 
 module.exports = { createBoard };
