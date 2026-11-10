@@ -553,6 +553,11 @@
         if (![...ITOA_V3_NUM, ...ITOA_V3_TEXT].includes(op.field)) fail('알 수 없는 항목');
         const a = ((r.v3s ||= {})[String(op.sid)] ||= {});
         a[op.field] = ITOA_V3_TEXT.includes(op.field) ? String(op.value ?? '').slice(0, 1000) : op.value === '' || op.value == null ? '' : Math.max(0, Math.floor(Number(op.value)) || 0);
+        // 업데이트 불가 = 설치 수량 - 최신 업데이트 (두 칸 모두 적었을 때 자동 계산)
+        if (op.field === 'installed' || op.field === 'latest' || op.field === 'fail') {
+          const has = v => v !== '' && v != null;
+          a.fail = has(a.installed) && has(a.latest) ? Math.max(0, a.installed - a.latest) : '';
+        }
         touch(r);
         break;
       }

@@ -229,6 +229,7 @@
   table.ed.it-cnt input::-webkit-inner-spin-button, table.ed.it-cnt input::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
   table.ed.it-cnt td.late { background: #fffafa; }
   table.ed.it-cnt td.calc { font-size: 12px; }
+  table.ed.it input.calc-auto { background: #fafafa; cursor: default; font-weight: 700; }
   .it-detail-bar { display: flex; justify-content: flex-end; margin: 8px 0 0; }
   table.ed.it td.it-sum { padding: 9px 10px; vertical-align: middle; font-size: 12.5px; }
   .it-site-h { font-size: 13px; font-weight: 800; margin: 14px 4px 0; color: #374151; }
@@ -2573,7 +2574,7 @@ function renderItoa() {
   else h += `<div class="it-detail-bar"><button type="button" class="sm" id="it-detail">${itDetail ? '▲ 상세 닫기' : '▼ 상세보기 (사업장별)'}</button></div>` + (itDetail ? mat : '');
 
   // V3 백신 운영 현황: 사업장별 한 줄
-  const v3in = (sid, f, cls = '') => { const txt = f === 'note' || f === 'clean'; return `<input type="${txt ? 'text' : 'number'}" ${txt ? 'autocomplete="off"' : 'min="0"'} class="${cls}" data-v3="1" data-sid="${sid}" data-col="v3.${f}" value="${esc(r.v3s?.[sid]?.[f] ?? '')}">`; };
+  const v3in = (sid, f, cls = '') => { const txt = f === 'note' || f === 'clean'; return `<input type="${txt ? 'text' : 'number'}" ${txt ? 'autocomplete="off"' : 'min="0"'} ${f === 'fail' ? 'readonly tabindex="-1" title="설치 수량 - 최신 업데이트 (자동 계산)" ' : ''}class="${cls}" data-v3="1" data-sid="${sid}" data-col="v3.${f}" value="${esc(r.v3s?.[sid]?.[f] ?? '')}">`; };
   // 회사 칸은 사업장 수 × 2줄
   const v3Lbl = (rows, i) => {
     const { g, s } = rows[i], first = i === 0 || rows[i - 1].g !== g, span = rows.filter(x => x.g === g).length * 2;
@@ -2582,7 +2583,7 @@ function renderItoa() {
   const vRows = siteRows(sid => Object.values(r.v3s?.[sid] || {}).some(v => String(v ?? '').trim()));
   const v3Detail = (vRows.length ? `<table class="ed it"><colgroup><col style="width:90px"><col style="width:96px"><col style="width:13%"><col style="width:13%"><col style="width:13%"><col></colgroup>
     <thead><tr><th>회사</th><th>사업장</th><th>V3 설치 수량</th><th>최신 업데이트</th><th>업데이트 불가</th><th>최신 업데이트 불가 PC, 사용자 및 사유</th></tr></thead>
-    <tbody>` + vRows.map(({ s }, i) => `<tr>${v3Lbl(vRows, i)}<td>${v3in(s.id, 'installed')}</td><td>${v3in(s.id, 'latest', 'blue')}</td><td>${v3in(s.id, 'fail', 'red')}</td><td>${v3in(s.id, 'note', 'blue l')}</td></tr>
+    <tbody>` + vRows.map(({ s }, i) => `<tr>${v3Lbl(vRows, i)}<td>${v3in(s.id, 'installed')}</td><td>${v3in(s.id, 'latest', 'blue')}</td><td>${v3in(s.id, 'fail', 'red calc-auto')}</td><td>${v3in(s.id, 'note', 'blue l')}</td></tr>
       <tr><td class="lbl it-clean-l">방역 활동 실시</td><td colspan="3">${v3in(s.id, 'clean', 'l')}</td></tr>`).join('') +
     '</tbody></table>' : noSite);
   h += '<div class="sec-t">2. 백신 현황 및 방역 활동 내역</div>';
@@ -2809,6 +2810,7 @@ function updateItoaCalc() {
   // V3 합계 (관리자 화면, 사업장 두 곳 이상)
   const v3 = Ops.itoaV3(db, r);
   ['installed', 'latest', 'fail'].forEach(k => { const el = $('it-v3-' + k); if (el) el.textContent = v3[k].toLocaleString(); });
+  document.querySelectorAll('input[data-col="v3.fail"]').forEach(el => { el.value = r.v3s?.[el.dataset.sid]?.fail ?? ''; });
   // 개인 입력표: 구분별 처리율 · 계
   document.querySelectorAll('[data-prate]').forEach(el => {
     const [sid, k] = el.dataset.prate.split('|'), v = r.cnt?.[sid]?.[k] || {};
