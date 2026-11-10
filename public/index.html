@@ -2635,7 +2635,7 @@ function renderItoa() {
     // 관리자: 집계 한 줄 (근무 · 출근 일수는 그 주 근무일, 지각/조퇴 일수는 사업장 합계, 글은 "회사_사업장: 내용") + [상세보기]를 누르면 사업장별 표
     const ar = Ops.itoaAttRows(db, r);
     const at = Ops.itoaAttTotal(db, r), total = k => at[k] === '' ? 0 : at[k];
-    const joined = k => { const t = ar.filter(x => String(x[k] ?? '').trim()); return t.length === 1 ? t[0][k] : t.map(x => (x.label ? `${x.label}: ${x[k]}` : x[k])).join(' / '); };
+    const joined = k => at[k];   // 글은 공통 집계와 같게 (사업장 하나만 적어도 사업장명)
     h += `<table class="ed it att"><colgroup><col style="width:186px"><col style="width:8%"><col style="width:8%"><col style="width:7%"><col style="width:14%"><col style="width:12%"><col style="width:16%"><col></colgroup>
       <thead><tr><th rowspan="2">구분</th><th rowspan="2">근무 일수</th><th rowspan="2">출근 일수</th><th colspan="2">기타(지각/조퇴)</th><th colspan="2">긴급 장애(근무시간외)</th><th rowspan="2">특이 사항</th></tr>
       <tr><th>일수</th><th>사 유</th><th>일시</th><th>내 용</th></tr></thead>

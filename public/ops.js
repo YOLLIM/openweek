@@ -135,7 +135,7 @@
   function itoaAttTotal(db, r) {
     const rows = itoaAttRows(db, r);
     const sum = k => { const v = rows.filter(x => String(x[k] ?? '').trim() !== ''); return v.length ? v.reduce((a, x) => a + (Number(x[k]) || 0), 0) : ''; };
-    const join = k => { const t = rows.filter(x => String(x[k] ?? '').trim()); return t.length === 1 ? String(t[0][k]) : t.map(x => (x.label ? `${x.label}: ${x[k]}` : x[k])).join(' / '); };
+    const join = k => { const t = rows.filter(x => String(x[k] ?? '').trim()); return t.map(x => (x.label ? `${x.label}: ${x[k]}` : x[k])).join(' / '); };   // 사업장 하나만 적어도 사업장명을 붙임
     const max = k => { const v = rows.filter(x => String(x[k] ?? '').trim() !== ''); return v.length ? Math.max(...v.map(x => Number(x[k]) || 0)) : ''; };
     return { work: max('work'), present: max('present'), etcDays: sum('etcDays'), etcReason: join('etcReason'), emDate: join('emDate'), emContent: join('emContent'), note: join('note') };
   }
@@ -145,7 +145,7 @@
   const ITOA_V3_NOTE_ALL = '별첨 자료 참조';
   const NO_CONTENT = /^(특이\s*사항\s*없음|해당\s*없음|없음|-)\.?$/;
   const hasV3 = a => [...ITOA_V3_NUM, ...ITOA_V3_TEXT].some(k => String(a?.[k] ?? '').trim());
-  // 출력용 V3: 건수는 사업장 합계, 글은 "회사_사업장: 내용" (사업장 하나뿐이면 내용만)
+  // 출력용 V3: 건수는 사업장 합계, 글은 "회사_사업장: 내용" (사업장 하나만 적어도 사업장명을 붙임, 담당 사업장 보고서는 내용만)
   function itoaV3(db, r) {
     const it = db.itoa || {}, out = { installed: 0, latest: 0, fail: 0 }, texts = { note: [], clean: [] };
     const add = (label, a) => {
@@ -155,8 +155,8 @@
       ITOA_V3_TEXT.forEach(k => { const t = String(a[k] ?? '').trim(); if (t && !(k === 'clean' && NO_CONTENT.test(t))) texts[k].push([label, t]); });
     };
     add('', r.v3s?._);
-    for (const g of it.groups || []) for (const s of (it.sites || []).filter(x => x.groupId === g.id)) add(itoaSiteLabel(g, s), r.v3s?.[s.id]);
-    ITOA_V3_TEXT.forEach(k => { const t = texts[k]; out[k] = t.length === 1 ? t[0][1] : t.map(([l, x]) => (l ? `${l}: ${x}` : x)).join(' / '); });
+    for (const g of it.groups || []) for (const s of (it.sites || []).filter(x => x.groupId === g.id)) add(r.mineOnly ? '' : itoaSiteLabel(g, s), r.v3s?.[s.id]);
+    ITOA_V3_TEXT.forEach(k => { const t = texts[k]; out[k] = t.map(([l, x]) => (l ? `${l}: ${x}` : x)).join(' / '); });
     // 전체(통합) 보고서의 업데이트 불가 사유는 사업장별 사유 대신 "별첨 자료 참조"로 고정
     if (!r.mineOnly) out.note = ITOA_V3_NOTE_ALL;
     return out;
