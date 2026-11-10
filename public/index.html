@@ -1279,10 +1279,15 @@ function orderedSites(filter) {
 // 보고서에 표시할 사업장: 사용 중 + (중지됐지만 이 보고서에 데이터 있는 것)
 const reportSites = r => orderedSites(s => s.active || siteHasData(r, s.id));
 const sortedReports = () => db.reports.slice().sort((a, b) => a.date.localeCompare(b.date));
-// 처음 열 때 보여줄 보고서: 오늘이 보고 기간에 든 주 → 없으면 오늘 이후 가장 가까운 주 → 없으면 가장 최근 주
+// 처음 열 때 보여줄 보고서: 보고일(ITOA는 기간 끝날)이 이번 주(월~일)에 든 보고서
+// → 없으면 오늘 이후 가장 가까운 보고서 → 없으면 가장 최근 보고서
+// 예) 11/11(수) 보고일인 11월 2주차는 11/9(월)~11/15(일) 동안 처음 화면
 function thisWeekOf(list) {
-  const today = toISO(new Date());
-  return list.find(r => r.start && r.end && r.start <= today && today <= r.end) || list.find(r => (r.start || r.end) > today) || list[list.length - 1];
+  const now = new Date(), mon = new Date(now.getFullYear(), now.getMonth(), now.getDate() - (now.getDay() + 6) % 7);
+  const from = toISO(mon), to = toISO(new Date(mon.getFullYear(), mon.getMonth(), mon.getDate() + 6)), today = toISO(now);
+  const key = r => r.date || r.end || '';
+  const sorted = list.slice().sort((a, b) => key(a).localeCompare(key(b)));
+  return sorted.find(r => key(r) >= from && key(r) <= to) || sorted.find(r => key(r) >= today) || sorted[sorted.length - 1];
 }
 
 // ---------- 공통 화면 요소 ----------
