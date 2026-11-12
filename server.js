@@ -35,6 +35,7 @@ const MAX_LOGIN_BODY = 64 * 1024;   // 로그인 전에 받는 요청은 작게 
 fs.mkdirSync(BACKUP_DIR, { recursive: true });
 const auth = createAuth(DATA_DIR);
 const stats = require('./stats.js').createStats(DATA_DIR);
+const survey = require('./survey.js').createSurvey(DATA_DIR);
 const checker = createChecker(DATA_DIR);
 const mailer = createMailer(DATA_DIR, PORT);
 const board = createBoard(DATA_DIR, mailer, empNo => auth.emailOf(empNo));
@@ -269,6 +270,17 @@ const server = http.createServer(async (req, res) => {
     if (P === '/api/stats' && M === 'GET') {
       if (!auth.isStatsViewer(user)) return sendJSON(res, 403, { error: '볼 수 없는 화면입니다.' });
       return sendJSON(res, 200, { ...stats.read(url.searchParams.get('days')), users: auth.roster(), now: Date.now() });
+    }
+    // 사용 설문: 로그인한 사용자는 아직 안 낸 설문을 받고 제출, 결과 · 진행/마감은 전산개발담당자만
+    if (P === '/api/survey' && M === 'GET') return sendJSON(res, 200, { survey: survey.pending(user, auth.isStatsViewer(user)) });
+    if (P === '/api/survey' && M === 'POST') {
+      try { survey.submit(user, (await body(req, 64 * 1024)).answers); return sendJSON(res, 200, { ok: true }); }
+      catch (e) { return sendJSON(res, e.status || 500, { error: e.message }); }
+    }
+    if (P === '/api/survey/results') {
+      if (!auth.isStatsViewer(user)) return sendJSON(res, 403, { error: '볼 수 없는 화면입니다.' });
+      if (M === 'POST') survey.setOpen((await body(req, 4096)).open);
+      return sendJSON(res, 200, { ...survey.results(), users: auth.roster(), now: Date.now() });
     }
     // 부문: 사용자 관리에서 정한 부문의 데이터만 보내고, 다른 부문의 작업·파일은 막는다
     const depts = auth.deptsOf(user);
