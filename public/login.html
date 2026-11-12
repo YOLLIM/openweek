@@ -212,7 +212,8 @@ const pref = {
 // 창(탭)별 로그인 토큰 (메인 화면과 같은 방식)
 const tabToken = {
   get() { try { return sessionStorage.getItem('ow_tok') || ''; } catch { return ''; } },
-  set(t) { try { t ? sessionStorage.setItem('ow_tok', t) : sessionStorage.removeItem('ow_tok'); } catch { /* 저장소 접근 불가 */ } },
+  // 새로 로그인하면 설문 [나중에 하기]도 풀어서 다시 묻는다
+  set(t) { try { t ? sessionStorage.setItem('ow_tok', t) : sessionStorage.removeItem('ow_tok'); sessionStorage.removeItem('ow_sv_later'); } catch { /* 저장소 접근 불가 */ } },
 };
 async function api(path, data) {
   const headers = { 'Content-Type': 'application/json', ...(tabToken.get() ? { 'X-OW-Session': tabToken.get() } : {}) };
