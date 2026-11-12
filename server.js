@@ -271,16 +271,17 @@ const server = http.createServer(async (req, res) => {
       if (!auth.isStatsViewer(user)) return sendJSON(res, 403, { error: '볼 수 없는 화면입니다.' });
       return sendJSON(res, 200, { ...stats.read(url.searchParams.get('days')), users: auth.roster(), now: Date.now() });
     }
-    // 사용 설문: 로그인한 사용자는 아직 안 낸 설문을 받고 제출, 결과 · 진행/마감은 전산개발담당자만
+    // 사용 설문: 로그인한 사용자는 기간 안의 안 낸 설문을 받고 제출, 만들기 · 결과는 전산개발담당자만
     if (P === '/api/survey' && M === 'GET') return sendJSON(res, 200, { survey: survey.pending(user, auth.isStatsViewer(user)) });
     if (P === '/api/survey' && M === 'POST') {
-      try { survey.submit(user, (await body(req, 64 * 1024)).answers); return sendJSON(res, 200, { ok: true }); }
+      try { const b = await body(req, 64 * 1024); survey.submit(user, b.id, b.answers); return sendJSON(res, 200, { ok: true, next: survey.pending(user, auth.isStatsViewer(user)) }); }
       catch (e) { return sendJSON(res, e.status || 500, { error: e.message }); }
     }
     if (P === '/api/survey/results') {
       if (!auth.isStatsViewer(user)) return sendJSON(res, 403, { error: '볼 수 없는 화면입니다.' });
-      if (M === 'POST') survey.setOpen((await body(req, 4096)).open);
-      return sendJSON(res, 200, { ...survey.results(), users: auth.roster(), now: Date.now() });
+      let id = url.searchParams.get('id');
+      if (M === 'POST') try { const b = await body(req, 256 * 1024); id = survey.admin(user, b); } catch (e) { return sendJSON(res, e.status || 500, { error: e.message }); }
+      return sendJSON(res, 200, { ...survey.results(id), users: auth.roster(), now: Date.now() });
     }
     // 부문: 사용자 관리에서 정한 부문의 데이터만 보내고, 다른 부문의 작업·파일은 막는다
     const depts = auth.deptsOf(user);

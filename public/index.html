@@ -196,10 +196,31 @@
   .svr-bar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; }
   .svr-state { padding: 3px 10px; border-radius: 99px; font-size: 12px; font-weight: 700; background: #e7f6ee; color: #15803d; }
   .svr-state.closed { background: #f1f1f1; color: #6b7280; }
+  .svr-state.before { background: #eef2fb; color: #1f3fd6; }
+  .svr-bar select#svr-sel { min-width: 320px; max-width: 100%; font-weight: 700; }
+  .svr-info { display: flex; gap: 14px; flex-wrap: wrap; align-items: center; font-size: 13px; color: #4b5563; margin: -4px 0 14px; }
+  .svr-info select { width: auto; margin: 0; }
+  .svr-empty { text-align: center; padding: 60px 20px; }
+  /* 설문 만들기 · 고치기 */
+  #se-dlg { width: 760px; max-width: calc(100vw - 20px); padding: 0; overflow: hidden; background: #fbf9f6; }
+  #se-dlg .rm-head h3 .ic { background: linear-gradient(135deg, #8b3cf0, #5b21b6); }
+  .se-body { padding: 16px 20px 6px; max-height: 66vh; overflow-y: auto; outline: none; }
+  .se-body label.f { display: block; font-size: 12px; font-weight: 700; color: #4b5563; margin: 0 0 4px; }
+  .se-body .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .se-body input, .se-body textarea, .se-body select { margin: 0 0 10px; }
+  .se-q { background: #fff; border: 1px solid #ebe3d6; border-radius: 12px; padding: 12px 14px 4px; margin-bottom: 10px; }
+  .se-q-h { display: flex; align-items: center; gap: 6px; margin-bottom: 8px; flex-wrap: wrap; }
+  .se-q-h .no { font-weight: 800; color: #8b3cf0; min-width: 26px; }
+  .se-q-h select { width: auto; margin: 0; }
+  .se-q-h label { display: flex; align-items: center; gap: 4px; font-size: 13px; cursor: pointer; }
+  .se-q-h label input { width: auto; margin: 0; }
+  .se-q-h .sp { flex: 1; }
+  .se-q textarea.opts { width: 100%; min-height: 96px; font-size: 13px; }
+  .se-lock { background: #fff8e6; border: 1px solid #f3d9a4; border-radius: 10px; padding: 8px 12px; font-size: 12.5px; color: #92400e; margin-bottom: 10px; }
   .svr-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
-  .svr-row { display: grid; grid-template-columns: 180px 1fr 76px; gap: 10px; align-items: center; font-size: 13px; margin: 6px 0; }
-  .svr-row .bar { height: 18px; background: #f2eee8; border-radius: 5px; overflow: hidden; }
-  .svr-row .bar i { display: block; height: 100%; background: linear-gradient(90deg, #a77bf3, #8b3cf0); border-radius: 5px; }
+  .svr-row { display: grid; grid-template-columns: 180px minmax(0, 1fr) max-content; gap: 10px; align-items: center; font-size: 13px; margin: 6px 0; }
+  .svr-row .svr-b { height: 18px; background: #f2eee8; border-radius: 5px; overflow: hidden; }
+  .svr-row .svr-b i { display: block; height: 100%; background: linear-gradient(90deg, #a77bf3, #8b3cf0); border-radius: 5px; }
   .svr-row .c { text-align: right; font-variant-numeric: tabular-nums; color: #374151; }
   .svr-avg { font-size: 13px; color: var(--muted); margin: -4px 0 8px; }
   .svr-avg b { font-size: 20px; color: #5b21b6; margin-right: 4px; }
@@ -691,10 +712,13 @@
     dialog, #rm-dlg, #sg-dlg, dialog.wide { width: calc(100vw - 20px); max-width: calc(100vw - 20px); padding: 18px 14px 14px; }
     #rm-dlg, #sv-dlg { padding: 0; }
     #sv-dlg { width: calc(100vw - 20px); max-width: calc(100vw - 20px); }
+    #se-dlg { padding: 0; }
+    .se-body .row2 { grid-template-columns: 1fr; }
+    .svr-bar select#svr-sel { min-width: 0; width: 100%; }
     .sv-scale { grid-template-columns: repeat(5, 1fr); gap: 4px; }
     .sv-scale label { font-size: 10.5px; padding: 6px 2px; }
     .svr-grid { grid-template-columns: 1fr; }
-    .svr-row { grid-template-columns: 110px 1fr 64px; }
+    .svr-row { grid-template-columns: 110px minmax(0, 1fr) max-content; }
     #sv-dlg .rm-foot { flex-wrap: wrap; }
     #sv-dlg .rm-foot .info { flex-basis: 100%; }
     #sv-dlg .rm-foot button { flex: 1; }
@@ -1003,21 +1027,32 @@
       <div class="card"><h2>최근 기록 <span class="muted" style="font-weight:400">(최근 200건)</span></h2><div style="overflow-x:auto;max-height:480px;overflow-y:auto"><table class="list sx" id="sx-log"></table></div></div>
     </section>
 
-    <!-- 설문조사 결과 (전산개발담당자만) -->
+    <!-- 설문조사 (전산개발담당자만): 설문 목록 · 결과 · 만들기 -->
     <section class="view hidden" id="view-survey">
       <div class="svr-bar">
-        <b id="svr-title" style="font-size:16px"></b><span class="svr-state" id="svr-state"></span>
-        <label class="field" style="margin:0">부문 <select id="svr-dept"><option value="">전체</option><option value="net">네트워크부문</option><option value="itoa">ITOA</option></select></label>
+        <select id="svr-sel" aria-label="설문 고르기"></select><span class="svr-state" id="svr-state"></span>
         <span class="spacer" style="flex:1"></span>
-        <button id="svr-preview">설문 미리보기</button>
+        <button class="teal" id="svr-new"><svg class="i"><use href="#i-plus"/></svg>새 설문</button>
+        <button id="svr-edit">고치기</button>
+        <button id="svr-copy" title="이 설문의 문항으로 새 설문을 만듭니다">복사해서 새로</button>
+        <button id="svr-preview">미리보기</button>
         <button id="svr-toggle"></button>
-        <button id="svr-csv"><svg class="i"><use href="#i-down"/></svg>엑셀(CSV) 받기</button>
-        <button id="svr-reload">새로 고침</button>
+        <button class="danger" id="svr-del">삭제</button>
       </div>
-      <div class="sx-tiles" id="svr-tiles"></div>
-      <div id="svr-qs"></div>
-      <div class="card"><h2>응답자별 <span class="muted" style="font-weight:400" id="svr-n"></span></h2><div style="overflow-x:auto"><table class="list svr" id="svr-table"></table></div></div>
-      <div class="card"><h2>아직 응답하지 않은 사용자 <span class="muted" style="font-weight:400" id="svr-miss-n"></span></h2><div class="svr-miss" id="svr-miss"></div></div>
+      <div class="svr-info" id="svr-info-wrap">
+        <span id="svr-info"></span>
+        <label>부문 <select id="svr-dept"><option value="">전체</option><option value="net">네트워크부문</option><option value="itoa">ITOA</option></select></label>
+        <span class="spacer" style="flex:1"></span>
+        <button class="sm" id="svr-csv"><svg class="i"><use href="#i-down"/></svg>엑셀(CSV) 받기</button>
+        <button class="sm" id="svr-reload">새로 고침</button>
+      </div>
+      <div id="svr-main">
+        <div class="sx-tiles" id="svr-tiles"></div>
+        <div id="svr-qs"></div>
+        <div class="card"><h2>응답자별 <span class="muted" style="font-weight:400" id="svr-n"></span></h2><div style="overflow-x:auto"><table class="list svr" id="svr-table"></table></div></div>
+        <div class="card"><h2>아직 응답하지 않은 사용자 <span class="muted" style="font-weight:400" id="svr-miss-n"></span></h2><div class="svr-miss" id="svr-miss"></div></div>
+      </div>
+      <div class="card svr-empty hidden" id="svr-empty"><b>아직 만든 설문이 없습니다.</b><div class="muted" style="margin-top:6px">[새 설문]으로 설문을 만들어 보세요.</div></div>
     </section>
 
     <!-- 미리보기 -->
@@ -1138,6 +1173,16 @@
       <button type="button" id="sv-later">나중에 하기</button>
       <button type="submit" class="teal" id="sv-send">제출</button></div>
   </form>
+</dialog>
+<dialog id="se-dlg" aria-labelledby="se-title">
+  <div class="rm-head">
+    <h3 id="se-title"><span class="ic">🛠</span><span id="se-title-t">새 설문</span></h3>
+    <div class="sub">기간 안에서만 사용자가 로그인할 때 팝업으로 뜹니다. 기간을 비워 두면 마감할 때까지 계속 뜹니다.</div>
+  </div>
+  <div class="se-body" id="se-body"></div>
+  <div class="rm-foot"><span class="info" id="se-info"></span>
+    <button type="button" id="se-cancel">취소</button>
+    <button type="button" class="teal" id="se-save">저장</button></div>
 </dialog>
 <dialog id="v3-dlg" aria-labelledby="v3-title">
   <div class="rm-head">
@@ -3409,28 +3454,28 @@ $('menu-manual').onclick = () => toggleManualMenu($('manual-sub').classList.cont
 $('menu-manual').onkeydown = e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); $('menu-manual').click(); } };
 
 // ---------- 사용 설문 ----------
-// 로그인하면 아직 안 낸 설문을 팝업으로 묻는다. [나중에 하기]는 이 창을 닫을 때까지 다시 묻지 않음 (다음 접속 때 다시)
-let svDef = null, svPreview = false;
+// 로그인하면 기간 안의 아직 안 낸 설문을 팝업으로 묻는다. [나중에 하기]는 이 창을 닫을 때까지 다시 묻지 않음 (다음 접속 때 다시)
+let svDef = null, svPreview = false, svNext = null;
+const svMD = d => d ? `${Number(d.slice(5, 7))}/${Number(d.slice(8))}` : '';
+const svPeriod = x => x.from || x.to ? `${svMD(x.from) || '지금'} ~ ${svMD(x.to) || '마감 때까지'}` : '기간 제한 없음';
 async function askSurvey() {
-  try {
-    if (sessionStorage.getItem('ow_sv_later')) return;
-  } catch {}
+  try { if (sessionStorage.getItem('ow_sv_later')) return; } catch {}
   try {
     const j = await fetch('/api/survey').then(r => r.json());
     if (j.survey && !document.querySelector('dialog[open]')) openSurvey(j.survey, false);
   } catch {}
 }
 function openSurvey(def, preview) {
-  svDef = def; svPreview = preview;
+  svDef = def; svPreview = preview; svNext = null;
   $('sv-title-t').textContent = def.title + (preview ? ' (미리보기)' : '');
-  $('sv-intro').textContent = def.intro;
+  $('sv-intro').textContent = (def.intro || '') + (def.from || def.to ? `  설문 기간: ${svPeriod(def)}` : '');
   $('sv-info').innerHTML = preview ? '미리보기입니다. 제출해도 저장되지 않습니다.' : '응답은 전산개발담당자만 봅니다. <span style="color:#e5484d">*</span> 는 꼭 답할 문항입니다.';
   $('sv-later').textContent = preview ? '닫기' : '나중에 하기';
   $('sv-send').classList.remove('hidden');
   $('sv-body').innerHTML = def.questions.map((q, i) => {
-    const head = `<div class="t"><span class="no">${i + 1}.</span>${esc(q.text)}${q.required ? '<span class="req">*</span>' : q.type === 'multi' ? '<span class="opt-l">(여러 개 선택)</span>' : '<span class="opt-l">(선택)</span>'}</div>`;
+    const head = `<div class="t"><span class="no">${i + 1}.</span>${esc(q.text)}${q.required ? '<span class="req">*</span>' : ''}${q.type === 'multi' ? '<span class="opt-l">(여러 개 선택)</span>' : q.required ? '' : '<span class="opt-l">(선택)</span>'}</div>`;
     let body = '';
-    if (q.type === 'scale') body = `<div class="sv-scale">${q.labels.map((l, k) => `<label><input type="radio" name="${q.id}" value="${k + 1}"><b>${k + 1}</b>${esc(l)}</label>`).join('')}</div>`;
+    if (q.type === 'scale') body = `<div class="sv-scale" style="grid-template-columns:repeat(${q.labels.length},1fr)">${q.labels.map((l, k) => `<label><input type="radio" name="${q.id}" value="${k + 1}"><b>${k + 1}</b>${esc(l)}</label>`).join('')}</div>`;
     else if (q.type === 'choice') body = `<div class="sv-pick">${q.options.map(o => `<label><input type="radio" name="${q.id}" value="${esc(o)}">${esc(o)}</label>`).join('')}</div>`;
     else if (q.type === 'multi') body = `<div class="sv-pick">${q.options.map(o => `<label><input type="checkbox" name="${q.id}" value="${esc(o)}">${esc(o)}</label>`).join('')}</div>`;
     else body = `<textarea name="${q.id}" maxlength="2000" placeholder="자유롭게 적어 주세요"></textarea>`;
@@ -3449,49 +3494,65 @@ function surveyAnswers() {
   return out;
 }
 $('sv-body').addEventListener('change', e => e.target.closest('.sv-q')?.classList.remove('err'));
+const svLater = () => { if (!svPreview && $('sv-send').classList.contains('hidden') === false) try { sessionStorage.setItem('ow_sv_later', '1'); } catch {} };
 $('sv-later').onclick = () => {
-  if (!svPreview) try { sessionStorage.setItem('ow_sv_later', '1'); } catch {}
+  svLater();
   $('sv-dlg').close();
+  // 다음 설문이 있으면 이어서
+  if (svNext) { const n = svNext; svNext = null; setTimeout(() => openSurvey(n, false), 300); }
 };
 // Esc 로 닫아도 [나중에 하기]와 같게
-$('sv-dlg').addEventListener('cancel', () => { if (!svPreview) try { sessionStorage.setItem('ow_sv_later', '1'); } catch {} });
+$('sv-dlg').addEventListener('cancel', svLater);
 $('sv-form').addEventListener('submit', async e => {
   e.preventDefault();
+  if ($('sv-send').classList.contains('hidden')) return;
   const a = surveyAnswers();
-  const miss = svDef.questions.filter(q => q.required && (a[q.id] == null || a[q.id] === ''));
+  const miss = svDef.questions.filter(q => q.required && (a[q.id] == null || a[q.id] === '' || (Array.isArray(a[q.id]) && !a[q.id].length)));
   document.querySelectorAll('.sv-q').forEach(el => el.classList.toggle('err', miss.some(q => q.id === el.dataset.q)));
   if (miss.length) { document.querySelector(`.sv-q[data-q="${miss[0].id}"]`).scrollIntoView({ behavior: 'smooth', block: 'center' }); return; }
   if (svPreview) { $('sv-dlg').close(); return; }
   const btn = $('sv-send'); btn.disabled = true; btn.textContent = '보내는 중…';
   try {
-    const r = await fetch('/api/survey', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ answers: a }) });
+    const r = await fetch('/api/survey', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: svDef.id, answers: a }) });
     const j = await r.json();
     if (!r.ok) throw new Error(j.error || '보내지 못했습니다.');
-    $('sv-body').innerHTML = '<div class="sv-done"><div class="big">🙏</div><b>설문에 참여해 주셔서 감사합니다.</b><div class="muted" style="margin-top:6px">보내 주신 의견은 개선에 반영하겠습니다.</div></div>';
-    $('sv-later').textContent = '닫기'; $('sv-send').classList.add('hidden');
+    svNext = j.next || null;
+    $('sv-body').innerHTML = `<div class="sv-done"><div class="big">🙏</div><b>설문에 참여해 주셔서 감사합니다.</b><div class="muted" style="margin-top:6px">보내 주신 의견은 개선에 반영하겠습니다.${svNext ? '<br>진행 중인 설문이 하나 더 있습니다.' : ''}</div></div>`;
+    $('sv-later').textContent = svNext ? '다음 설문' : '닫기'; $('sv-send').classList.add('hidden');
     $('sv-info').textContent = '';
   } catch (err) { alert(err.message); }
   finally { btn.disabled = false; btn.textContent = '제출'; }
 });
 
-// ---------- 설문조사 결과 (전산개발담당자만) ----------
-let svrData = null;
+// ---------- 설문조사 (전산개발담당자만): 목록 · 결과 · 만들기 ----------
+let svrData = null, svrId = '';
+const SVR_STATE = { open: '진행 중', before: '시작 전', ended: '기간 끝', closed: '마감' };
 async function renderSurveyResults(post) {
   try {
-    const r = await fetch('/api/survey/results', post ? { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(post) } : {});
+    const r = await fetch('/api/survey/results' + (svrId ? '?id=' + encodeURIComponent(svrId) : ''), post ? { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(post) } : {});
     const j = await r.json();
-    if (!r.ok) throw new Error(j.error || '불러오지 못했습니다.');
-    svrData = j;
+    if (!r.ok) { if (post) { alert(j.error || '저장하지 못했습니다.'); return false; } throw new Error(j.error || '불러오지 못했습니다.'); }
+    svrData = j; svrId = j.survey?.id || '';
     drawSurveyResults();
-  } catch (e) { $('svr-tiles').innerHTML = `<div class="muted">${esc(e.message)}</div>`; }
+    return true;
+  } catch (e) { $('svr-tiles').innerHTML = `<div class="muted">${esc(e.message)}</div>`; return false; }
 }
 $('svr-reload').onclick = () => renderSurveyResults();
-$('svr-dept').onchange = () => svrData && drawSurveyResults();
-$('svr-preview').onclick = () => svrData && openSurvey(svrData.survey, true);
+$('svr-sel').onchange = () => { svrId = $('svr-sel').value; renderSurveyResults(); };
+$('svr-dept').onchange = () => svrData?.survey && drawSurveyResults();
+$('svr-preview').onclick = () => svrData?.survey && openSurvey(svrData.survey, true);
 $('svr-toggle').onclick = () => {
-  if (!svrData) return;
-  const open = !svrData.open;
-  if (confirm(open ? '설문을 다시 진행할까요?\n아직 응답하지 않은 사용자에게 로그인할 때 팝업이 다시 뜹니다.' : '설문을 마감할까요?\n더 이상 팝업이 뜨지 않습니다. 받은 응답은 그대로 남습니다.')) renderSurveyResults({ open });
+  const sv = svrData?.survey; if (!sv) return;
+  const open = !sv.open;
+  if (confirm(open ? `"${sv.title}" 설문을 다시 진행할까요?\n기간 안이면 아직 응답하지 않은 사용자에게 로그인할 때 팝업이 다시 뜹니다.` : `"${sv.title}" 설문을 마감할까요?\n더 이상 팝업이 뜨지 않습니다. 받은 응답은 그대로 남습니다.`)) renderSurveyResults({ action: 'open', id: sv.id, open });
+};
+$('svr-del').onclick = async () => {
+  const sv = svrData?.survey; if (!sv) return;
+  const n = Object.keys(svrData.responses).length;
+  if (!confirm(`"${sv.title}" 설문을 삭제할까요?${n ? `\n받은 응답 ${n}건도 함께 지워지며 되살릴 수 없습니다.` : ''}`)) return;
+  if (n && prompt('삭제하려면 "삭제" 라고 입력하세요.') !== '삭제') return;
+  svrId = '';
+  renderSurveyResults({ action: 'delete', id: sv.id });
 };
 const SVR_DEPT = { net: '네트워크부문', itoa: 'ITOA', all: '전체' };
 function svrRows() {
@@ -3504,22 +3565,33 @@ function svrRows() {
   return { rows, targets };
 }
 function drawSurveyResults() {
-  const { survey: sv, open } = svrData, { rows, targets } = svrRows();
+  const sv = svrData.survey, has = !!sv;
+  // 설문 목록
+  $('svr-sel').innerHTML = svrData.list.length ? svrData.list.map(x => `<option value="${x.id}"${x.id === svrId ? ' selected' : ''}>${esc(x.title)} · ${svPeriod(x)} · ${SVR_STATE[x.state]} · 응답 ${x.count}명</option>`).join('') : '<option value="">설문 없음</option>';
+  ['svr-edit', 'svr-copy', 'svr-preview', 'svr-toggle', 'svr-del'].forEach(id => $(id).disabled = !has);
+  $('svr-main').classList.toggle('hidden', !has);
+  $('svr-info-wrap').classList.toggle('hidden', !has);
+  $('svr-empty').classList.toggle('hidden', has);
+  $('svr-state').classList.toggle('hidden', !has);
+  if (!has) return;
+  const st = sv.state;
+  $('svr-state').textContent = SVR_STATE[st];
+  $('svr-state').classList.toggle('closed', st === 'closed' || st === 'ended');
+  $('svr-state').classList.toggle('before', st === 'before');
+  $('svr-toggle').textContent = sv.open ? '마감' : '다시 진행';
+  $('svr-info').innerHTML = `<b>설문 기간</b> ${esc(svPeriod(sv))}${sv.from || sv.to ? ` <span class="muted">(${sv.from || ''} ~ ${sv.to || ''})</span>` : ''} · 문항 ${sv.questions.length}개${sv.by ? ` · 만든 사람 ${esc(sv.by)}` : ''}`;
+  const { rows, targets } = svrRows();
   const answered = new Set(rows.map(x => x.u.empNo));
-  $('svr-title').textContent = sv.title;
-  $('svr-state').textContent = open ? '진행 중' : '마감';
-  $('svr-state').classList.toggle('closed', !open);
-  $('svr-toggle').textContent = open ? '설문 마감' : '다시 진행';
   const n = rows.length, t = targets.length, nIn = targets.filter(u => answered.has(u.empNo)).length;
   const avg = id => { const v = rows.map(x => x.answers[id]).filter(Number.isFinite); return v.length ? (v.reduce((a, b) => a + b, 0) / v.length).toFixed(2) : '-'; };
   const scales = sv.questions.filter(q => q.type === 'scale');
-  $('svr-tiles').innerHTML = [[n + '명', '응답'], [t ? Math.round(nIn / t * 100) + '%' : '-', `응답률 (${nIn} / ${t}명)`], ...scales.map(q => [avg(q.id) + ' <span style="font-size:13px;color:var(--muted)">/ 5</span>', q.text.replace(/\?$/, '') + ' (평균)'])]
+  $('svr-tiles').innerHTML = [[n + '명', '응답'], [t ? Math.round(nIn / t * 100) + '%' : '-', `응답률 (${nIn} / ${t}명)`], ...scales.map(q => [avg(q.id) + ` <span style="font-size:13px;color:var(--muted)">/ ${q.labels.length}</span>`, q.text.replace(/\?$/, '') + ' (평균)'])]
     .map(([v, l]) => `<div class="sx-tile"><div class="n">${v}</div><div class="l">${esc(l)}</div></div>`).join('');
-  const bars = (items, total) => items.map(([l, c]) => `<div class="svr-row"><span>${esc(l)}</span><span class="bar"><i style="width:${total ? c / total * 100 : 0}%"></i></span><span class="c">${c}명 · ${total ? Math.round(c / total * 100) : 0}%</span></div>`).join('');
+  const bars = (items, total) => items.map(([l, c]) => `<div class="svr-row"><span>${esc(l)}</span><span class="svr-b"><i style="width:${total ? c / total * 100 : 0}%"></i></span><span class="c">${c}명 · ${total ? Math.round(c / total * 100) : 0}%</span></div>`).join('');
   const cards = sv.questions.map((q, i) => {
     const vals = rows.map(x => x.answers[q.id]).filter(v => v != null);
     let body;
-    if (q.type === 'scale') body = `<div class="svr-avg"><b>${avg(q.id)}</b>/ 5 · 응답 ${vals.length}명</div>` + bars(q.labels.map((l, k) => [`${k + 1} ${l}`, vals.filter(v => v === k + 1).length]).reverse(), vals.length);
+    if (q.type === 'scale') body = `<div class="svr-avg"><b>${avg(q.id)}</b>/ ${q.labels.length} · 응답 ${vals.length}명</div>` + bars(q.labels.map((l, k) => [`${k + 1} ${l}`, vals.filter(v => v === k + 1).length]).reverse(), vals.length);
     else if (q.type === 'choice') body = `<div class="svr-avg">응답 ${vals.length}명</div>` + bars(q.options.map(o => [o, vals.filter(v => v === o).length]), vals.length);
     else if (q.type === 'multi') body = `<div class="svr-avg">응답 ${vals.length}명 (여러 개 선택, 비율은 응답자 수 기준)</div>` + bars(q.options.map(o => [o, vals.filter(v => v.includes(o)).length]).sort((a, b) => b[1] - a[1]), n);
     else body = vals.length ? `<ul class="svr-txt">${rows.filter(x => x.answers[q.id]).map(x => `<li><span class="who">${esc(x.u.name)} · ${SVR_DEPT[x.u.dept] || ''} · ${sxTime(x.at)}</span>${esc(x.answers[q.id])}</li>`).join('')}</ul>` : '<div class="muted">아직 적은 의견이 없습니다.</div>';
@@ -3527,8 +3599,8 @@ function drawSurveyResults() {
   });
   // 객관식은 두 칸씩, 글 문항은 한 줄 전체
   const objs = cards.filter((_, i) => sv.questions[i].type !== 'text'), txts = cards.filter((_, i) => sv.questions[i].type === 'text');
-  $('svr-qs').innerHTML = `<div class="svr-grid">${objs.join('')}</div>` + txts.join('');
-  const short = (q, v) => v == null ? '' : q.type === 'scale' ? `${v} ${q.labels[v - 1]}` : Array.isArray(v) ? v.join(', ') : String(v);
+  $('svr-qs').innerHTML = (objs.length ? `<div class="svr-grid">${objs.join('')}</div>` : '') + txts.join('');
+  const short = (q, v) => v == null ? '' : q.type === 'scale' ? `${v} ${q.labels[v - 1] || ''}` : Array.isArray(v) ? v.join(', ') : String(v);
   $('svr-n').textContent = `(${n}명)`;
   $('svr-table').innerHTML = `<thead><tr><th>이름</th><th>부문</th><th>응답 시각</th>${sv.questions.map((q, i) => `<th title="${esc(q.text)}">${i + 1}번</th>`).join('')}</tr></thead><tbody>` +
     (rows.length ? rows.map(x => `<tr><td><b>${esc(x.u.name)}</b></td><td>${SVR_DEPT[x.u.dept] || ''}</td><td class="muted" style="white-space:nowrap">${sxTime(x.at)}</td>${sv.questions.map(q => `<td class="l">${esc(short(q, x.answers[q.id]))}</td>`).join('')}</tr>`).join('')
@@ -3538,17 +3610,95 @@ function drawSurveyResults() {
   $('svr-miss').innerHTML = miss.length ? miss.map(u => `<span>${esc(u.name)} <span class="muted">${SVR_DEPT[u.dept] || ''}</span></span>`).join('') : '<span class="muted" style="background:none">모두 응답했습니다.</span>';
 }
 $('svr-csv').onclick = () => {
-  if (!svrData) return;
-  const { survey: sv } = svrData, { rows } = svrRows();
+  const sv = svrData?.survey; if (!sv) return;
+  const { rows } = svrRows();
   const q = v => `"${String(v ?? '').replace(/"/g, '""')}"`;
   const short = (qq, v) => v == null ? '' : qq.type === 'scale' ? `${v}` : Array.isArray(v) ? v.join(', ') : String(v);
   const lines = [['이름', '부문', '응답 시각', ...sv.questions.map((x, i) => `${i + 1}. ${x.text}`)].map(q).join(',')]
     .concat(rows.map(x => [x.u.name, SVR_DEPT[x.u.dept] || '', new Date(x.at).toLocaleString('ko-KR'), ...sv.questions.map(qq => short(qq, x.answers[qq.id]))].map(q).join(',')));
   const a = document.createElement('a');
   a.href = URL.createObjectURL(new Blob(['\ufeff' + lines.join('\r\n')], { type: 'text/csv;charset=utf-8' }));
-  a.download = `설문조사_결과_${toISO(new Date())}.csv`;
+  a.download = `설문조사_${sv.title.replace(/[\\/:*?"<>|]/g, '_')}_${toISO(new Date())}.csv`;
   a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 1000);
 };
+
+// 설문 만들기 · 고치기
+const SE_TYPE = { scale: '점수', choice: '하나 고르기', multi: '여러 개 고르기', text: '직접 쓰기' };
+const SE_SCALE = ['매우 불만족', '불만족', '보통', '만족', '매우 만족'];
+let seDraft = null, seLocked = false;
+function openSurveyEditor(mode) {
+  const sv = svrData?.survey;
+  const base = mode === 'new' ? { title: '', intro: '', from: '', to: '', questions: [{ type: 'scale', required: true, text: '', labels: SE_SCALE.slice() }] }
+    : JSON.parse(JSON.stringify({ title: sv.title, intro: sv.intro, from: sv.from, to: sv.to, questions: sv.questions }));
+  if (mode === 'copy') { base.title = sv.title + ' (복사)'; base.from = base.to = ''; base.questions.forEach(q => delete q.id); }
+  seDraft = { ...base, id: mode === 'edit' ? sv.id : null };
+  seLocked = mode === 'edit' && Object.keys(svrData.responses).length > 0;
+  $('se-title-t').textContent = mode === 'edit' ? '설문 고치기' : mode === 'copy' ? '설문 복사해서 새로 만들기' : '새 설문';
+  $('se-info').textContent = seLocked ? '' : '문항은 최대 30개, 보기는 문항마다 최대 20개입니다.';
+  drawSurveyEditor();
+  $('se-dlg').showModal();
+  $('se-body').scrollTop = 0;
+}
+function drawSurveyEditor() {
+  const d = seDraft, L = seLocked, dis = L ? ' disabled' : '';
+  $('se-body').innerHTML = `
+    <label class="f">설문 제목</label><input id="se-t" maxlength="100" value="${esc(d.title)}" placeholder="예) 12월 주간업무보고 사용 설문">
+    <label class="f">안내 문구 <span class="muted" style="font-weight:400">(팝업 위쪽에 표시)</span></label><textarea id="se-intro" maxlength="1000" rows="2" placeholder="예) 사용해 보신 느낌을 알려 주시면 개선에 반영하겠습니다.">${esc(d.intro)}</textarea>
+    <div class="row2"><div><label class="f">시작일 <span class="muted" style="font-weight:400">(비우면 바로)</span></label><input type="date" id="se-from" value="${d.from || ''}"></div>
+      <div><label class="f">종료일 <span class="muted" style="font-weight:400">(비우면 마감할 때까지)</span></label><input type="date" id="se-to" value="${d.to || ''}"></div></div>
+    ${L ? '<div class="se-lock">이미 응답이 있어 문항은 고칠 수 없습니다. 제목 · 안내 · 기간만 고칠 수 있습니다. (문항을 바꾸려면 [복사해서 새로])</div>' : ''}
+    ${d.questions.map((q, i) => `<div class="se-q" data-i="${i}">
+      <div class="se-q-h"><span class="no">${i + 1}.</span>
+        <select data-k="type"${dis}>${Object.entries(SE_TYPE).map(([k, v]) => `<option value="${k}"${q.type === k ? ' selected' : ''}>${v}</option>`).join('')}</select>
+        <label><input type="checkbox" data-k="required"${q.required ? ' checked' : ''}${dis}>꼭 답하기</label>
+        <span class="sp"></span>
+        ${L ? '' : `<button type="button" class="sm" data-mv="-1" title="위로"${i ? '' : ' disabled'}>↑</button><button type="button" class="sm" data-mv="1" title="아래로"${i < d.questions.length - 1 ? '' : ' disabled'}>↓</button><button type="button" class="sm danger" data-rm title="문항 삭제">✕</button>`}
+      </div>
+      <input data-k="text" maxlength="300" value="${esc(q.text)}" placeholder="문항 내용"${dis}>
+      ${q.type === 'text' ? '' : `<label class="f">${q.type === 'scale' ? '점수 단계 (1점부터 한 줄에 하나)' : '보기 (한 줄에 하나)'}</label><textarea class="opts" data-k="${q.type === 'scale' ? 'labels' : 'options'}"${dis}>${esc((q.type === 'scale' ? q.labels : q.options || []).join('\n'))}</textarea>`}
+    </div>`).join('')}
+    ${L ? '' : '<button type="button" id="se-add" style="margin-bottom:12px"><svg class="i"><use href="#i-plus"/></svg>문항 추가</button>'}`;
+}
+// 입력한 값을 초안에 반영
+$('se-body').addEventListener('input', e => {
+  const t = e.target, d = seDraft;
+  if (t.id === 'se-t') d.title = t.value; else if (t.id === 'se-intro') d.intro = t.value; else if (t.id === 'se-from') d.from = t.value; else if (t.id === 'se-to') d.to = t.value;
+  const box = t.closest('.se-q'); if (!box) return;
+  const q = d.questions[+box.dataset.i], k = t.dataset.k;
+  if (k === 'text') q.text = t.value;
+  else if (k === 'required') q.required = t.checked;
+  else if (k === 'labels' || k === 'options') q[k] = t.value.split('\n').map(x => x.trim()).filter(Boolean);
+});
+$('se-body').addEventListener('change', e => {
+  const t = e.target, box = t.closest('.se-q');
+  if (t.dataset.k === 'required') seDraft.questions[+box.dataset.i].required = t.checked;
+  if (t.dataset.k !== 'type') return;
+  const q = seDraft.questions[+box.dataset.i]; q.type = t.value;
+  if (q.type === 'scale' && !(q.labels || []).length) q.labels = SE_SCALE.slice();
+  if ((q.type === 'choice' || q.type === 'multi') && !(q.options || []).length) q.options = [];
+  drawSurveyEditor();
+});
+$('se-body').addEventListener('click', e => {
+  const qs = seDraft.questions;
+  if (e.target.closest('#se-add')) { qs.push({ type: 'choice', required: false, text: '', options: [] }); drawSurveyEditor(); $('se-body').scrollTop = $('se-body').scrollHeight; return; }
+  const box = e.target.closest('.se-q'); if (!box) return;
+  const i = +box.dataset.i, mv = e.target.closest('[data-mv]');
+  if (mv) { const j = i + Number(mv.dataset.mv); [qs[i], qs[j]] = [qs[j], qs[i]]; drawSurveyEditor(); return; }
+  if (e.target.closest('[data-rm]') && (qs[i].text === '' || confirm(`${i + 1}번 문항을 지울까요?`))) { qs.splice(i, 1); drawSurveyEditor(); }
+});
+$('se-cancel').onclick = () => $('se-dlg').close();
+$('se-save').onclick = async () => {
+  const d = seDraft;
+  if (!d.title.trim()) return alert('설문 제목을 적어 주세요.');
+  if (d.from && d.to && d.from > d.to) return alert('시작일이 종료일보다 늦습니다.');
+  const btn = $('se-save'); btn.disabled = true;
+  const ok = await renderSurveyResults({ action: d.id ? 'update' : 'create', id: d.id, title: d.title, intro: d.intro, from: d.from, to: d.to, questions: d.questions });
+  btn.disabled = false;
+  if (ok) $('se-dlg').close();
+};
+$('svr-new').onclick = () => openSurveyEditor('new');
+$('svr-edit').onclick = () => svrData?.survey && openSurveyEditor('edit');
+$('svr-copy').onclick = () => svrData?.survey && openSurveyEditor('copy');
 
 // ---------- 접속 통계 (전산개발담당자만) ----------
 const SX_KIND = { login: '로그인', auto: '자동 로그인', continue: '계속하기', fail: '로그인 실패', logout: '로그아웃', visit: '접속', view: '메뉴 이동' };
