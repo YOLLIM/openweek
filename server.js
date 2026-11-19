@@ -39,6 +39,10 @@ const survey = require('./survey.js').createSurvey(DATA_DIR);
 const checker = createChecker(DATA_DIR);
 const mailer = createMailer(DATA_DIR, PORT);
 const board = createBoard(DATA_DIR, mailer, empNo => auth.emailOf(empNo));
+const devinfo = require('./devinfo.js').createDevInfo({
+  dataDir: DATA_DIR, appDir: __dirname, mailer, ai: () => checker.status(),
+  counts: () => ({ users: auth.list().length, active: auth.list().filter(u => u.active).length, reports: state.db.reports.length, itoa: (state.db.itoa?.reports || []).length, posts: board.list().length, surveys: survey.results().list.length }),
+});
 
 function load() {
   try {
@@ -276,6 +280,15 @@ const server = http.createServer(async (req, res) => {
     if (P === '/api/survey' && M === 'POST') {
       try { const b = await body(req, 64 * 1024); survey.submit(user, b.id, b.answers); return sendJSON(res, 200, { ok: true, next: survey.pending(user, auth.isStatsViewer(user)) }); }
       catch (e) { return sendJSON(res, e.status || 500, { error: e.message }); }
+    }
+    // 개발구성 (전산개발담당자만, 별도 비밀번호)
+    if (P.startsWith('/api/devinfo')) {
+      if (!auth.isStatsViewer(user)) return sendJSON(res, 403, { error: '볼 수 없는 화면입니다.' });
+      try {
+        if (P === '/api/devinfo/gate' && M === 'GET') return sendJSON(res, 200, devinfo.gate());
+        if (P === '/api/devinfo/gate' && M === 'POST') return sendJSON(res, 200, devinfo.act(user, await body(req, 4096)));
+        if (P === '/api/devinfo' && M === 'GET') return sendJSON(res, 200, devinfo.read(user, req.headers['x-ow-gate']));
+      } catch (e) { return sendJSON(res, e.status || 500, { error: e.message }); }
     }
     if (P === '/api/survey/results') {
       if (!auth.isStatsViewer(user)) return sendJSON(res, 403, { error: '볼 수 없는 화면입니다.' });

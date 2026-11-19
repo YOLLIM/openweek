@@ -62,7 +62,7 @@ function createChecker(dataDir) {
   return {
     status() {
       const k = apiKey();
-      return { configured: !!k, masked: k ? k.slice(0, 7) + '…' + k.slice(-4) : '', fromEnv: !readConfig().anthropicApiKey && !!process.env.ANTHROPIC_API_KEY };
+      return { configured: !!k, masked: k ? k.slice(0, 7) + '…' + k.slice(-4) : '', fromEnv: !readConfig().anthropicApiKey && !!process.env.ANTHROPIC_API_KEY, model: MODEL };
     },
 
     setKey(key) {

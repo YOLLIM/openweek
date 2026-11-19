@@ -170,6 +170,38 @@
   .rm-to .p .mail { color: #4b5563; font-size: 12px; }
   .rm-to .p.bad .mail { color: #b45309; }
   .rm-reason { margin-top: 8px; font-size: 12px; color: #b45309; font-weight: 600; }
+  /* 개발구성 */
+  .dv-gate { max-width: 420px; margin: 40px auto; text-align: center; padding: 30px 28px; }
+  .dv-gate .ic { font-size: 34px; }
+  .dv-gate h2 { margin: 8px 0 6px; }
+  .dv-gate input { text-align: center; font-size: 18px; letter-spacing: 6px; margin: 6px 0; }
+  .dv-gate .err { color: #e5484d; font-size: 13px; min-height: 18px; margin: 4px 0 8px; }
+  .dv-gate button { width: 100%; }
+  .dv-bar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; font-size: 13px; color: #4b5563; }
+  .dv-map { overflow-x: auto; }
+  .dv-map svg { width: 100%; min-width: 760px; height: auto; display: block; }
+  .dv-map .bx { fill: #fff; stroke: #d6cdbf; stroke-width: 1.4; }
+  .dv-map .bx.k1 { fill: #f3ecff; stroke: #b9a2ef; }
+  .dv-map .bx.k2 { fill: #e9f6f3; stroke: #8fcfc1; }
+  .dv-map .bx.k3 { fill: #fff5e9; stroke: #f0c58e; }
+  .dv-map .bx.k4 { fill: #eef2fb; stroke: #a9b9e8; }
+  .dv-map .vm { fill: #f7f4ee; stroke: #9aa3b2; stroke-width: 1.6; stroke-dasharray: 7 5; }
+  .dv-map text { font-family: inherit; fill: #1f2328; }
+  .dv-map .t { font-size: 15px; font-weight: 800; }
+  .dv-map .s { font-size: 11.5px; fill: #4b5563; }
+  .dv-map .vt { font-size: 14px; font-weight: 800; fill: #374151; }
+  .dv-map .ln { fill: none; stroke: #6b7280; stroke-width: 1.8; }
+  .dv-map .ln.sec { stroke: #14a38b; }
+  .dv-map .lb { font-size: 11px; font-weight: 700; fill: #6b7280; }
+  .dv-map .lb.sec { fill: #0f766e; }
+  table.list.dv td { font-size: 12.5px; vertical-align: top; }
+  table.list.dv td.k { font-weight: 700; white-space: nowrap; }
+  table.list.dv td.n { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+  table.list.dv code, .dv-code { font-family: Consolas, monospace; font-size: 12px; background: #f4f1ec; padding: 1px 6px; border-radius: 5px; }
+  .dv-code { display: block; padding: 10px 12px; white-space: pre-wrap; margin: 6px 0; }
+  .dv-ok { color: #15803d; font-weight: 700; }
+  .dv-no { color: #b45309; font-weight: 700; }
+  .dv-sec { margin: 0; padding-left: 18px; font-size: 13px; line-height: 1.9; }
   /* 사용 설문 팝업 */
   #sv-dlg { width: 680px; padding: 0; overflow: hidden; background: #fbf9f6; }
   #sv-dlg .rm-head h3 .ic { background: linear-gradient(135deg, #8b3cf0, #5b21b6); }
@@ -750,6 +782,7 @@
   <symbol id="i-chart" viewBox="0 0 24 24"><path d="M3 3v18h18"/><path d="M8 17V11M12 17V7M16 17v-4"/></symbol>
   <symbol id="i-list" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></symbol>
   <symbol id="i-book" viewBox="0 0 24 24"><path d="M2 4h6a4 4 0 0 1 4 4v13a3 3 0 0 0-3-3H2Z"/><path d="M22 4h-6a4 4 0 0 0-4 4v13a3 3 0 0 1 3-3h7Z"/></symbol>
+  <symbol id="i-server" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="7" rx="2"/><rect x="3" y="14" width="18" height="7" rx="2"/><path d="M7 6.5h.01M7 17.5h.01M11 6.5h6M11 17.5h6"/></symbol>
   <symbol id="i-building" viewBox="0 0 24 24"><rect x="4" y="2" width="16" height="20" rx="2"/><path d="M9 22v-4h6v4M8 6h.01M16 6h.01M12 6h.01M12 10h.01M12 14h.01M16 10h.01M16 14h.01M8 10h.01M8 14h.01"/></symbol>
   <symbol id="i-gear" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1Z"/></symbol>
   <symbol id="i-folder" viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"/></symbol>
@@ -797,6 +830,7 @@
         <a data-view="users" id="menu-users" class="hidden"><svg class="i"><use href="#i-user"/></svg>사용자 관리</a>
         <a data-view="stats" id="menu-stats" class="hidden"><svg class="i"><use href="#i-pulse"/></svg>접속 통계</a>
         <a data-view="survey" id="menu-survey" class="hidden"><svg class="i"><use href="#i-check"/></svg>설문조사</a>
+        <a data-view="devinfo" id="menu-devinfo" class="hidden"><svg class="i"><use href="#i-server"/></svg>개발구성</a>
         <div class="menu-group" id="menu-manual" role="button" tabindex="0"><svg class="i"><use href="#i-book"/></svg>사용자 매뉴얼<svg class="i chev"><use href="#i-right"/></svg></div>
         <div class="submenu hidden" id="manual-sub">
           <a data-view="manual-user" class="sub">사용자용</a>
@@ -1026,6 +1060,12 @@
         <div class="card"><h2>브라우저</h2><table class="list sx" id="sx-br"></table></div>
       </div>
       <div class="card"><h2>최근 기록 <span class="muted" style="font-weight:400">(최근 200건)</span></h2><div style="overflow-x:auto;max-height:480px;overflow-y:auto"><table class="list sx" id="sx-log"></table></div></div>
+    </section>
+
+    <!-- 개발구성 (전산개발담당자만, 별도 비밀번호) -->
+    <section class="view hidden" id="view-devinfo">
+      <div class="card dv-gate hidden" id="dv-gate"></div>
+      <div class="hidden" id="dv-body"></div>
     </section>
 
     <!-- 설문조사 (전산개발담당자만): 설문 목록 · 결과 · 만들기 -->
@@ -1372,7 +1412,8 @@ function rerender() {
   const key = a && a.matches('input,textarea,select') ? focusKey(a) : null;
   const saved = key && { value: a.value, start: a.selectionStart, end: a.selectionEnd, scroll: a.scrollTop };
   renderChrome();
-  RENDER[view]();
+  // 개발구성은 다른 사용자의 변경과 관계없고 비밀번호 입력 중일 수 있어 다시 그리지 않음 ([새로 고침] 버튼으로)
+  if (view !== 'devinfo') RENDER[view]();
   drawPeerFields();
   if (!key) return;
   const el = [...document.querySelectorAll('input,textarea,select')].find(x => focusKey(x) === key);
@@ -1416,7 +1457,7 @@ function thisWeekOf(list) {
 }
 
 // ---------- 공통 화면 요소 ----------
-const VIEW_TITLE = { editor: '주간보고 작성', status: '전체 현황', monthly: '월간 보고', list: '보고서 목록', wiki: '주간보고 Wiki', sites: '사업장 관리', settings: '설정', users: '사용자 관리', preview: '미리보기 / 인쇄', itoa: '주간보고 작성', 'itoa-list': '보고서 목록', 'itoa-preview': '미리보기 / 인쇄', 'itoa-sites': '사업장 관리', 'itoa-status': '전체 현황', 'itoa-wiki': '주간보고 Wiki', 'manual-user': '사용자 매뉴얼 · 사용자용', 'manual-admin': '사용자 매뉴얼 · 관리자용', board: '문의 및 제안', stats: '접속 통계', survey: '설문조사' };
+const VIEW_TITLE = { editor: '주간보고 작성', status: '전체 현황', monthly: '월간 보고', list: '보고서 목록', wiki: '주간보고 Wiki', sites: '사업장 관리', settings: '설정', users: '사용자 관리', preview: '미리보기 / 인쇄', itoa: '주간보고 작성', 'itoa-list': '보고서 목록', 'itoa-preview': '미리보기 / 인쇄', 'itoa-sites': '사업장 관리', 'itoa-status': '전체 현황', 'itoa-wiki': '주간보고 Wiki', 'manual-user': '사용자 매뉴얼 · 사용자용', 'manual-admin': '사용자 매뉴얼 · 관리자용', board: '문의 및 제안', stats: '접속 통계', survey: '설문조사', devinfo: '개발구성' };
 function renderChrome() {
   const net = db.settings.dept || '';
   $('side-dept').textContent = `${net} · 주간보고`;
@@ -3432,7 +3473,7 @@ $('bd-detail').addEventListener('click', e => {
 
 // ---------- 사용자 매뉴얼 ----------
 // 부문과 관계없이 볼 수 있는 화면
-const COMMON_VIEWS = ['settings', 'users', 'manual-user', 'manual-admin', 'board', 'stats', 'survey'];
+const COMMON_VIEWS = ['settings', 'users', 'manual-user', 'manual-admin', 'board', 'stats', 'survey', 'devinfo'];
 function renderManual() {
   const adminMan = view === 'manual-admin', list = MANUAL[adminMan ? 'admin' : 'user'];
   $('man-title').textContent = adminMan ? '관리자용 매뉴얼' : '사용자용 매뉴얼';
@@ -3454,6 +3495,147 @@ function toggleManualMenu(open) {
 }
 $('menu-manual').onclick = () => toggleManualMenu($('manual-sub').classList.contains('hidden'));
 $('menu-manual').onkeydown = e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); $('menu-manual').click(); } };
+
+// ---------- 개발구성 (전산개발담당자만, 별도 비밀번호) ----------
+const dvTok = { get() { try { return sessionStorage.getItem('ow_dv_gate') || ''; } catch { return ''; } }, set(t) { try { t ? sessionStorage.setItem('ow_dv_gate', t) : sessionStorage.removeItem('ow_dv_gate'); } catch {} } };
+async function renderDevInfo() {
+  $('dv-body').classList.add('hidden');
+  if (dvTok.get()) {
+    const r = await fetch('/api/devinfo', { headers: { 'X-OW-Gate': dvTok.get() } });
+    if (r.ok) { drawDevInfo(await r.json()); return; }
+    dvTok.set('');
+  }
+  const g = await fetch('/api/devinfo/gate').then(r => r.json()).catch(() => ({}));
+  drawDevGate(g.set ? 'unlock' : 'setup');
+}
+function drawDevGate(mode, err = '') {
+  const el = $('dv-gate');
+  el.classList.remove('hidden');
+  el.innerHTML = mode === 'setup' ? `<div class="ic">🔐</div><h2>개발구성 비밀번호 정하기</h2>
+      <p class="muted" style="font-size:13px;margin:0 0 12px">처음 한 번만 정합니다. 이후 개발구성 화면을 열 때마다 입력합니다. (4~20자)</p>
+      <input type="password" id="dv-p1" placeholder="비밀번호" autocomplete="new-password" inputmode="numeric">
+      <input type="password" id="dv-p2" placeholder="비밀번호 다시 입력" autocomplete="new-password" inputmode="numeric">
+      <div class="err" id="dv-err">${esc(err)}</div><button class="teal" id="dv-go">정하고 들어가기</button>`
+    : `<div class="ic">🔒</div><h2>개발구성</h2>
+      <p class="muted" style="font-size:13px;margin:0 0 12px">사이트 구성 정보를 보려면 개발구성 비밀번호를 입력하세요.</p>
+      <input type="password" id="dv-p1" placeholder="비밀번호" autocomplete="off" inputmode="numeric">
+      <div class="err" id="dv-err">${esc(err)}</div><button class="teal" id="dv-go">들어가기</button>`;
+  const go = async () => {
+    const p1 = $('dv-p1').value, p2 = $('dv-p2')?.value;
+    if (mode === 'setup' && p1 !== p2) { $('dv-err').textContent = '두 번 입력한 비밀번호가 다릅니다.'; return; }
+    $('dv-go').disabled = true;
+    const r = await fetch('/api/devinfo/gate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: mode, pin: p1 }) });
+    const j = await r.json();
+    $('dv-go').disabled = false;
+    if (!r.ok) { $('dv-err').textContent = j.error || '확인하지 못했습니다.'; $('dv-p1').value = ''; if ($('dv-p2')) $('dv-p2').value = ''; $('dv-p1').focus(); return; }
+    dvTok.set(j.token);
+    el.classList.add('hidden');
+    renderDevInfo();
+  };
+  $('dv-go').onclick = go;
+  el.querySelectorAll('input').forEach(i => i.onkeydown = e => { if (e.key === 'Enter') go(); });
+  setTimeout(() => $('dv-p1')?.focus(), 50);
+}
+const dvBytes = n => n == null ? '-' : n < 1024 ? n + ' B' : n < 1048576 ? (n / 1024).toFixed(1) + ' KB' : n < 1073741824 ? (n / 1048576).toFixed(1) + ' MB' : (n / 1073741824).toFixed(2) + ' GB';
+const dvTime = t => t ? new Date(t).toLocaleString('ko-KR', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }) : '-';
+const dvDur = ms => { const m = Math.floor(ms / 60000), d = Math.floor(m / 1440), h = Math.floor(m % 1440 / 60); return d ? `${d}일 ${h}시간` : h ? `${h}시간 ${m % 60}분` : `${m}분`; };
+function drawDevInfo(j) {
+  $('dv-gate').classList.add('hidden');
+  const sv = j.server, host = (() => { try { return new URL(j.address).host; } catch { return j.address || ''; } })();
+  const ok = (b, y = '설정됨', n = '설정 안 됨') => b ? `<span class="dv-ok">${y}</span>` : `<span class="dv-no">${n}</span>`;
+  const box = (x, y, w, h, cls, t, sub) => `<rect class="bx ${cls}" x="${x}" y="${y}" width="${w}" height="${h}" rx="12"/><text class="t" x="${x + 16}" y="${y + 28}">${esc(t)}</text>` + sub.map((l, i) => `<text class="s" x="${x + 16}" y="${y + 48 + i * 16}">${esc(l)}</text>`).join('');
+  // 구성도
+  const map = `<svg viewBox="0 0 1100 470" role="img" aria-label="사이트 인프라 구성도">
+    <defs><marker id="dv-ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#6b7280"/></marker>
+      <marker id="dv-ar2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#14a38b"/></marker></defs>
+    <rect class="vm" x="455" y="12" width="430" height="446" rx="16"/>
+    <text class="vt" x="475" y="40">☁ Google Cloud · Compute Engine</text>
+    <text class="s" x="475" y="58">e2-micro (무료 등급) · 미국 중부 us-central1 · 디스크 30GB</text>
+    ${box(20, 160, 180, 96, 'k4', '👤 사용자', ['PC · 모바일 브라우저', '로그인 후 작성 · 출력'])}
+    ${box(240, 160, 180, 96, 'k4', '🌐 도메인', ['DuckDNS (무료)', host || '접속 주소'])}
+    ${box(240, 330, 180, 96, '', '🐙 GitHub', ['소스 코드 저장소 (공개)', '운영 데이터는 올리지 않음'])}
+    ${box(485, 76, 370, 76, 'k2', '🔒 Caddy 웹 서버', ['HTTPS 인증서 자동 발급 · 갱신 (Let\'s Encrypt)', '443 → 127.0.0.1:3000 · 요청 25MB 제한'])}
+    ${box(485, 176, 370, 86, 'k1', '⚙ Node.js 앱 (server.js)', [`systemd 서비스 openweek · 자동 재시작 · ${sv.node}`, '화면 · API · PPT · 엑셀 생성 · 메일 · AI 점검'])}
+    ${box(485, 286, 370, 76, 'k3', '🗄 data 폴더 (JSON 파일, DB 없음)', [`주간보고 · 계정 · 게시판 · 설문 · 그림 · 통계 (${dvBytes(j.data.total.size)})`, '하루 한 번 db.json 자동 백업 (data/backup)'])}
+    ${box(485, 380, 370, 62, '', '🕒 cron 매일 03:00', ['data 폴더 전체 압축 백업 → /opt/openweek-backup (14일)'])}
+    ${box(910, 76, 175, 96, 'k4', '✉ 회사 메일 서버', ['SMTP · 알림 메일', 'nodemailer'])}
+    ${box(910, 196, 175, 96, 'k4', '🤖 Claude API', ['주간보고 점검 (AI)', 'Anthropic'])}
+    ${box(910, 346, 175, 96, 'k3', '💻 개발 PC', ['매일 09:00 백업 내려받기', '최근 30개 보관'])}
+    <path class="ln" d="M200 208 H240" marker-end="url(#dv-ar)"/><text class="lb" x="203" y="200">HTTPS</text>
+    <path class="ln" d="M420 208 H440 V114 H485" marker-end="url(#dv-ar)"/><text class="lb" x="378" y="146">고정 IP</text>
+    <path class="ln" d="M670 152 V176" marker-end="url(#dv-ar)"/>
+    <path class="ln" d="M670 262 V286" marker-end="url(#dv-ar)"/><text class="lb" x="678" y="279">읽기 · 쓰기</text>
+    <path class="ln" d="M670 362 V380" marker-end="url(#dv-ar)"/>
+    <path class="ln" d="M420 378 H467 V219 H485" marker-end="url(#dv-ar)"/><text class="lb" x="300" y="320">update.sh 배포 (git pull)</text>
+    <path class="ln" d="M855 200 H880 V124 H910" marker-end="url(#dv-ar)"/><text class="lb" x="862" y="70">알림 메일</text>
+    <path class="ln" d="M855 230 H895 V244 H910" marker-end="url(#dv-ar)"/>
+    <path class="ln sec" d="M855 411 H880 V394 H910" marker-end="url(#dv-ar2)"/><text class="lb sec" x="890" y="462">SSH (백업 전용 계정, 읽기만)</text>
+  </svg>`;
+  const comp = [
+    ['접속 주소', 'DuckDNS (무료 도메인)', j.address ? `<code>${esc(j.address)}</code>` : '-', '주소 → 서버 고정 IP 연결', '무료'],
+    ['서버', 'Google Cloud Compute Engine e2-micro', '미국 중부 us-central1 · 표준 디스크 30GB · 고정 IP', '사이트 실행 (24시간)', '무료 등급 범위'],
+    ['운영체제', esc(sv.platform), `호스트 ${esc(sv.hostname)} · CPU ${sv.cpus}개 · 메모리 ${dvBytes(sv.memTotal)}`, '서버 OS', '-'],
+    ['HTTPS', 'Caddy', '443 → 127.0.0.1:3000', '인증서 자동 발급 · 갱신, 압축, 요청 크기 제한', '무료'],
+    ['앱', `Node.js ${esc(sv.node)} (프레임워크 없음)`, '/opt/openweek · systemd <code>openweek</code> 서비스', '화면 · API · 실시간 동시 편집 · 출력 파일 생성', '무료'],
+    ['데이터 저장', 'JSON 파일 (별도 DB 없음)', `<code>${esc(j.data.dir)}</code>`, '모든 데이터 (아래 표)', '-'],
+    ['보고서 출력', 'pptxgenjs · exceljs', '서버에서 생성 후 내려받기', '주간 · 월간 PPT, 엑셀', '무료'],
+    ['메일', `nodemailer → ${j.mail.host ? esc(j.mail.host + ':' + j.mail.port) : '회사 SMTP'}`, `${ok(j.mail.configured)}${j.mail.from ? ` · 보내는 주소 ${esc(j.mail.from)}` : ''}`, '작성 독촉 · 댓글 알림 · 비밀번호 안내', '-'],
+    ['AI 점검', `Claude API (${esc(j.ai?.model || 'Anthropic')})`, ok(j.ai?.configured, 'API 키 설정됨', 'API 키 없음 (기본 규칙만)'), '주간보고 점검 (오타 · 맞춤법 · 문장)', '사용량만큼'],
+    ['소스 관리', 'GitHub 공개 저장소', j.git ? `${esc(j.git.branch)} 브랜치 · 배포 버전 <code>${esc(j.git.commit)}</code> (${dvTime(j.git.at)})` : '-', '코드 보관 · 배포', '무료'],
+    ['배포', 'update.sh', '<code>sudo bash /opt/openweek/deploy/update.sh</code>', 'git pull → npm ci → 서비스 재시작 (데이터는 그대로)', '-'],
+  ];
+  const tbl = (head, rows) => `<div style="overflow-x:auto"><table class="list dv"><thead><tr>${head.map(h => `<th>${h}</th>`).join('')}</tr></thead><tbody>${rows.join('')}</tbody></table></div>`;
+  const bs = j.backups.server;
+  const disk = sv.disk;
+  $('dv-body').innerHTML = `
+    <div class="dv-bar"><b>조회 시각</b> ${dvTime(j.now)}<span class="spacer" style="flex:1"></span>
+      <button class="sm" id="dv-reload">새로 고침</button><button class="sm" id="dv-chpw">비밀번호 바꾸기</button><button class="sm" id="dv-lock">🔒 잠그기</button></div>
+    <div class="sx-tiles">
+      ${[[dvDur(j.now - sv.started), '앱 가동 시간 (마지막 재시작 ' + dvTime(sv.started) + ')'], [dvBytes(j.data.total.size), `데이터 크기 (파일 ${j.data.total.files}개)`],
+        [disk ? dvBytes(disk.free) : '-', disk ? `디스크 남은 공간 (전체 ${dvBytes(disk.total)})` : '디스크 확인 불가'], [dvBytes(sv.memTotal - sv.memFree), `메모리 사용 (전체 ${dvBytes(sv.memTotal)}, 앱 ${dvBytes(sv.rss)})`],
+        [j.counts.active + '명', `사용 중인 계정 (전체 ${j.counts.users})`], [(j.counts.reports + j.counts.itoa) + '건', `보고서 (네트워크 ${j.counts.reports} · ITOA ${j.counts.itoa})`]]
+        .map(([v, l]) => `<div class="sx-tile"><div class="n" style="font-size:22px">${v}</div><div class="l">${esc(l)}</div></div>`).join('')}
+    </div>
+    <div class="card"><h2>한눈에 보는 구성도</h2><div class="dv-map">${map}</div></div>
+    <div class="card"><h2>구성 요소</h2>${tbl(['구분', '사용 기술 · 서비스', '위치 · 설정', '역할', '비용'], comp.map(r => `<tr><td class="k">${r[0]}</td><td>${r[1]}</td><td>${r[2]}</td><td>${r[3]}</td><td>${r[4]}</td></tr>`))}</div>
+    <div class="card"><h2>데이터 저장 위치 <span class="muted" style="font-weight:400">(${esc(j.data.dir)})</span></h2>
+      ${tbl(['파일 · 폴더', '내용', '크기', '파일 수', '마지막 변경'], j.data.items.map(x => `<tr><td class="k"><code>${esc(x.name)}</code></td><td>${esc(x.role)}</td><td class="n">${x.exists ? dvBytes(x.size) : '<span class="muted">없음</span>'}</td><td class="n">${x.exists ? x.files : ''}</td><td class="n">${x.exists ? dvTime(x.mtime) : ''}</td></tr>`))}
+      <p class="muted" style="font-size:12px;margin:8px 0 0">data 폴더는 GitHub에 올라가지 않습니다 (.gitignore). 공개 저장소에는 코드만 있습니다.</p></div>
+    <div class="card"><h2>백업</h2>${tbl(['백업', '방식', '위치', '보관', '현재 상태'], [
+      `<tr><td class="k">① 앱 자동 백업</td><td>저장할 때 하루 한 번 db.json 복사</td><td><code>data/backup</code></td><td>계속 보관</td><td>${j.backups.daily.count}개 (${esc(j.backups.daily.first)} ~ ${esc(j.backups.daily.last)})</td></tr>`,
+      `<tr><td class="k">② 서버 전체 백업</td><td>cron 매일 03:00, data 폴더 전체 압축</td><td><code>${esc(bs.dir)}</code></td><td>14일</td><td>${bs.error ? `<span class="muted">${esc(bs.error)}</span>` : `${bs.count}개 · 최근 ${esc(bs.last)} (${dvBytes(bs.lastSize)}, ${dvTime(bs.lastAt)})`}</td></tr>`,
+      '<tr><td class="k">③ PC 내려받기</td><td>Windows 작업 스케줄러 매일 09:00, SSH(백업 전용 계정)로 ②의 최신 파일</td><td><code>D:\\ANTI\\openweek-backup</code></td><td>30개</td><td><span class="muted">PC에서 확인</span></td></tr>',
+      '<tr><td class="k">④ 관리자 JSON 내보내기</td><td>설정 → 데이터 백업 / 복원 (수동)</td><td>관리자 PC</td><td>관리자가 관리</td><td><span class="muted">주간보고 데이터만</span></td></tr>'])}</div>
+    <div class="sx-grid">
+      <div class="card"><h2>보안 구성</h2><ul class="dv-sec">
+        <li>모든 접속 HTTPS (Caddy 자동 인증서), 앱은 서버 안(127.0.0.1)에서만 받음</li>
+        <li>비밀번호는 scrypt 해시로만 저장, 5번 틀리면 5분 잠금</li>
+        <li>로그인 쿠키 HttpOnly · Secure · SameSite, 7일 (자동 로그인 30일)</li>
+        <li>권한: 관리자 / 사용자, 부문별(네트워크 · ITOA) 데이터 분리, 사업장 담당자만 작성</li>
+        <li>접속 통계 · 설문조사 · 개발구성은 전산개발담당자만 (개발구성은 비밀번호 추가)</li>
+        <li>백업 전용 계정은 백업 파일 읽기만 가능</li>
+        <li>운영 데이터 · 비밀번호 · API 키는 GitHub에 올리지 않음</li></ul></div>
+      <div class="card"><h2>서버 설정</h2><ul class="dv-sec">
+        <li>포트 ${esc(sv.env.PORT)} · 받는 주소 ${esc(sv.env.HOST)} · ${esc(sv.env.NODE_ENV || '개발 모드')}</li>
+        <li>시간대 ${esc(sv.tz)} · HTTPS 전용 쿠키 ${ok(sv.env.COOKIE_SECURE, '켜짐', '꺼짐')}</li>
+        <li>초기 비밀번호: ${sv.env.RANDOM_INITIAL_PW ? '무작위 임시 비밀번호' : '메일 주소 @ 앞부분'}</li>
+        <li>서버 부하(1 · 5 · 15분): ${sv.load.map(x => x.toFixed(2)).join(' · ')}</li>
+        <li>서버 켜진 시간: ${dvDur(sv.osUptime)}</li></ul>
+        <div class="muted" style="font-size:12px;margin-top:6px">업데이트 명령</div><code class="dv-code">sudo bash /opt/openweek/deploy/update.sh</code></div>
+    </div>`;
+  $('dv-body').classList.remove('hidden');
+  $('dv-reload').onclick = renderDevInfo;
+  $('dv-lock').onclick = () => { dvTok.set(''); renderDevInfo(); };
+  $('dv-chpw').onclick = async () => {
+    const old = prompt('지금 비밀번호를 입력하세요.'); if (old == null) return;
+    const p1 = prompt('새 비밀번호 (4~20자)'); if (p1 == null) return;
+    if (prompt('새 비밀번호를 한 번 더 입력하세요.') !== p1) return alert('두 번 입력한 비밀번호가 다릅니다.');
+    const r = await fetch('/api/devinfo/gate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'change', old, pin: p1 }) });
+    const k = await r.json();
+    if (!r.ok) return alert(k.error);
+    dvTok.set(k.token); alert('개발구성 비밀번호를 바꿨습니다.');
+  };
+}
 
 // ---------- 사용 설문 ----------
 // 로그인하면 기간 안의 아직 안 낸 설문을 팝업으로 묻는다. [나중에 하기]는 이 창을 닫을 때까지 다시 묻지 않음 (다음 접속 때 다시)
@@ -3791,13 +3973,13 @@ function drawStats() {
 }
 
 // ---------- 화면 전환 ----------
-const RENDER = { editor: renderEditor, status: renderStatus, monthly: renderMonthly, list: renderList, wiki: renderWiki, sites: renderSites, settings: renderSettings, users: renderUsers, preview: renderPreview, itoa: renderItoa, 'itoa-list': renderItoaList, 'itoa-preview': renderItoaPreview, 'itoa-sites': renderSites, 'itoa-status': renderItoaStatus, 'itoa-wiki': renderWiki, 'manual-user': renderManual, 'manual-admin': renderManual, board: renderBoard, stats: renderStats, survey: renderSurveyResults };
+const RENDER = { editor: renderEditor, status: renderStatus, monthly: renderMonthly, list: renderList, wiki: renderWiki, sites: renderSites, settings: renderSettings, users: renderUsers, preview: renderPreview, itoa: renderItoa, 'itoa-list': renderItoaList, 'itoa-preview': renderItoaPreview, 'itoa-sites': renderSites, 'itoa-status': renderItoaStatus, 'itoa-wiki': renderWiki, 'manual-user': renderManual, 'manual-admin': renderManual, board: renderBoard, stats: renderStats, survey: renderSurveyResults, devinfo: renderDevInfo };
 function show(v) {
   // 관리자 전용 화면
   if (['sites', 'users', 'settings', 'itoa-sites', 'itoa-status', 'board'].includes(v) && me && me.role !== 'admin') v = v.startsWith('itoa') ? 'itoa' : 'editor';
   if (v === 'manual-admin' && me && me.role !== 'admin') v = 'manual-user';
   // 접속 통계: 전산개발담당자만
-  if ((v === 'stats' || v === 'survey') && !me?.dev) v = homeView();
+  if (['stats', 'survey', 'devinfo'].includes(v) && !me?.dev) v = homeView();
   // 내 부문이 아닌 화면이면 내 부문 첫 화면으로
   const vDept = ITOA_VIEWS.includes(v) ? 'itoa' : COMMON_VIEWS.includes(v) ? null : 'net';
   if (vDept && !myDepts().includes(vDept)) v = homeView();
@@ -3841,7 +4023,7 @@ document.addEventListener('keydown', e => { if (e.key === 'Escape') toggleDept(f
 const PALETTE = ['#f59e0b', '#8b3cf0', '#14a38b', '#e5484d', '#3b82f6', '#ea7a1a', '#22a35a', '#c2410c', '#0f766e', '#c2185b'];
 const colorOf = n => { let h = 0; for (const ch of n) h = (h * 31 + ch.codePointAt(0)) >>> 0; return PALETTE[h % PALETTE.length]; };
 const initials = n => [...n.replace(/\s/g, '')].slice(0, 2).join('');
-const VIEW_NAME = { editor: '작성 중', status: '전체 현황', monthly: '월간 보고', list: '보고서 목록', wiki: 'Wiki 검색', sites: '사업장 관리', settings: '설정', users: '사용자 관리', preview: '미리보기', itoa: 'ITOA 작성 중', 'itoa-list': 'ITOA 보고서 목록', 'itoa-preview': 'ITOA 미리보기', 'itoa-sites': 'ITOA 사업장 관리', 'itoa-status': 'ITOA 전체 현황', 'itoa-wiki': 'ITOA Wiki 검색', 'manual-user': '매뉴얼', 'manual-admin': '매뉴얼', board: '문의 및 제안', stats: '관리 화면', survey: '관리 화면' };
+const VIEW_NAME = { editor: '작성 중', status: '전체 현황', monthly: '월간 보고', list: '보고서 목록', wiki: 'Wiki 검색', sites: '사업장 관리', settings: '설정', users: '사용자 관리', preview: '미리보기', itoa: 'ITOA 작성 중', 'itoa-list': 'ITOA 보고서 목록', 'itoa-preview': 'ITOA 미리보기', 'itoa-sites': 'ITOA 사업장 관리', 'itoa-status': 'ITOA 전체 현황', 'itoa-wiki': 'ITOA Wiki 검색', 'manual-user': '매뉴얼', 'manual-admin': '매뉴얼', board: '문의 및 제안', stats: '관리 화면', survey: '관리 화면', devinfo: '관리 화면' };
 // 지금 보고 있는 보고서 (접속자 표시용)
 const ridOf = () => ITOA_VIEWS.includes(view) && view !== 'itoa-sites' ? itoaId || '' : ['editor', 'preview', 'status'].includes(view) ? currentId || '' : '';
 const cid = uid();
@@ -3857,6 +4039,7 @@ function setMe() {
   $('menu-users').classList.toggle('hidden', me.role !== 'admin');
   $('menu-stats').classList.toggle('hidden', !me.dev);
   $('menu-survey').classList.toggle('hidden', !me.dev);
+  $('menu-devinfo').classList.toggle('hidden', !me.dev);
   $('menu-settings').classList.toggle('hidden', me.role !== 'admin');
   $('menu-board').classList.toggle('hidden', me.role !== 'admin');
   $('menu-sites').classList.toggle('hidden', me.role !== 'admin');
@@ -3868,7 +4051,7 @@ function setMe() {
 $('me-btn').onclick = e => { e.stopPropagation(); $('me-menu').classList.toggle('hidden'); };
 document.addEventListener('click', () => $('me-menu').classList.add('hidden'));
 $('me-logout').onclick = async () => {
-  try { sessionStorage.removeItem('ow_sv_later'); } catch {}   // 다시 로그인하면 설문을 다시 묻는다
+  try { sessionStorage.removeItem('ow_sv_later'); sessionStorage.removeItem('ow_dv_gate'); } catch {}   // 다시 로그인하면 설문을 다시 묻고, 개발구성 비밀번호도 다시
   flushDirty();
   for (let i = 0; i < 30 && (inflight || queue.length); i++) await new Promise(ok => setTimeout(ok, 100));
   sendPresence(true);
