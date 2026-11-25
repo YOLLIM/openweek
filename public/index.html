@@ -170,6 +170,26 @@
   .rm-to .p .mail { color: #4b5563; font-size: 12px; }
   .rm-to .p.bad .mail { color: #b45309; }
   .rm-reason { margin-top: 8px; font-size: 12px; color: #b45309; font-weight: 600; }
+  /* 보고서 확정 불가 안내 */
+  #lk-dlg { width: 560px; max-width: calc(100vw - 20px); padding: 0; overflow: hidden; background: #fbf9f6; }
+  #lk-dlg .rm-head h3 .ic { background: linear-gradient(135deg, #e5484d, #b42318); }
+  .lk-body { padding: 16px 20px 8px; max-height: 60vh; overflow-y: auto; }
+  .lk-prog { display: flex; align-items: center; gap: 12px; background: #fff; border: 1px solid #ebe3d6; border-radius: 12px; padding: 12px 14px; margin-bottom: 14px; }
+  .lk-prog .lk-bar { flex: 1; height: 10px; background: #f0ebe3; border-radius: 99px; overflow: hidden; }
+  .lk-prog .lk-bar i { display: block; height: 100%; background: linear-gradient(90deg, #34c08f, #14a38b); border-radius: 99px; }
+  .lk-prog b { font-size: 14px; white-space: nowrap; font-variant-numeric: tabular-nums; }
+  .lk-prog b em { font-style: normal; color: #14a38b; }
+  .lk-label { font-size: 12.5px; font-weight: 800; color: #b42318; margin: 0 2px 8px; }
+  .lk-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 10px; background: #fff; border: 1px solid #f1d2d2; border-left: 4px solid #e5484d; border-radius: 10px; padding: 10px 12px; margin-bottom: 7px; }
+  .lk-row .nm { font-weight: 800; font-size: 14px; }
+  .lk-row .nm span { color: var(--muted); font-weight: 600; font-size: 12.5px; margin-right: 6px; }
+  .lk-row .who { font-size: 12px; color: #4b5563; margin-top: 3px; }
+  .lk-row .who.none { color: #b45309; }
+  .lk-chip { font-size: 11.5px; font-weight: 700; padding: 3px 9px; border-radius: 99px; white-space: nowrap; }
+  .lk-chip.wip { background: #fff3d6; color: #92400e; }
+  .lk-chip.empty { background: #f1f1f1; color: #6b7280; }
+  .lk-tip { font-size: 12.5px; color: #374151; background: #eef6f4; border: 1px solid #cfe9e2; border-radius: 10px; padding: 10px 12px; margin: 12px 0 6px; line-height: 1.6; }
+  #lk-dlg .rm-foot { flex-wrap: wrap; justify-content: flex-end; }
   /* 개발구성 */
   .dv-gate { max-width: 420px; margin: 40px auto; text-align: center; padding: 30px 28px; }
   .dv-gate .ic { font-size: 34px; }
@@ -264,7 +284,7 @@
   table.list.svr td.l { max-width: 260px; white-space: pre-wrap; }
   .svr-miss { display: flex; flex-wrap: wrap; gap: 6px; }
   .svr-miss span { padding: 3px 9px; border-radius: 99px; background: #f4f1ec; font-size: 12.5px; }
-  .rm-foot { align-items: center; gap: 8px; padding: 14px 20px 18px; border-top: 1px solid #ebe3d6; background: #fff; }
+  .rm-foot { display: flex; align-items: center; gap: 8px; padding: 14px 20px 18px; border-top: 1px solid #ebe3d6; background: #fff; }
   .rm-foot .info { font-size: 12px; color: var(--muted); margin-right: auto; }
   .rm-done { text-align: center; padding: 8px 0 14px; }
   .rm-done .big { font-size: 34px; }
@@ -1216,6 +1236,17 @@
       <button type="submit" class="teal" id="sv-send">제출</button></div>
   </form>
 </dialog>
+<dialog id="lk-dlg" aria-labelledby="lk-title">
+  <div class="rm-head">
+    <h3 id="lk-title"><span class="ic">🔒</span>아직 보고서를 확정할 수 없습니다</h3>
+    <div class="sub" id="lk-sub"></div>
+  </div>
+  <div class="lk-body" id="lk-body"></div>
+  <div class="rm-foot">
+    <button type="button" id="lk-remind" style="margin-right:auto">✉ 독촉 메일</button>
+    <button type="button" id="lk-close">닫기</button>
+    <button type="button" class="teal" id="lk-go">전체 현황으로 이동</button></div>
+</dialog>
 <dialog id="se-dlg" aria-labelledby="se-title">
   <div class="rm-head">
     <h3 id="se-title"><span class="ic">🛠</span><span id="se-title-t">새 설문</span></h3>
@@ -1817,16 +1848,38 @@ $('ed-lock').onclick = async () => {
   } else {
     // 모든 사업장이 [완료로 표시]되어야 확정할 수 있다
     const undone = Ops.reportUndone(db, r);
-    if (undone.length) {
-      if (confirm(`아직 완료로 표시되지 않은 사업장이 ${undone.length}곳 있어 보고서를 확정할 수 없습니다.\n\n${undone.map(x => '· ' + x).join('\n')}\n\n각 사업장 담당자가 작성을 마치면 [전체 현황]에서 [완료로 표시]해 주세요.\n모든 사업장이 완료되면 확정할 수 있습니다.\n\n전체 현황 화면으로 이동할까요?`)) show('status');
-      return;
-    }
+    if (undone.length) { openLockBlocked(r); return; }
     if (!confirm(`${fmtFull(r.date)} 보고서를 확정할까요?\n확정하면 내용을 수정할 수 없고, 관리자만 해제할 수 있습니다.`)) return;
     try { await waitSaved(); } catch (err) { return alert(err.message); }
     commit({ type: 'report.lock', id: r.id, value: true, role: me?.role });
   }
   renderEditor();
 };
+
+// 확정할 수 없을 때: 완료 안 된 사업장 · 담당자 · 작성 상태를 보여 주고 전체 현황 / 독촉 메일로 안내
+let lkSids = [];
+async function openLockBlocked(r) {
+  await loadUsersBrief();
+  const all = reportSites(r), todo = all.filter(x => !r.done?.[x.id]), done = all.length - todo.length;
+  lkSids = todo.map(x => x.id);
+  $('lk-sub').textContent = `${weekLabel(r)} · 보고일 ${fmtFull(r.date)} — 모든 사업장이 완료로 표시되어야 확정할 수 있습니다.`;
+  $('lk-body').innerHTML = `
+    <div class="lk-prog"><div class="lk-bar"><i style="width:${all.length ? done / all.length * 100 : 0}%"></i></div><b><em>${done}</em> / ${all.length} 사업장 완료</b></div>
+    <div class="lk-label">완료로 표시되지 않은 사업장 ${todo.length}곳</div>` +
+    todo.map(x => {
+      const g = groupName(x.groupId), st = siteStatus(r, x), wrote = st.s1 || st.s2 || st.s3;
+      const people = (x.assignees || []).map(nameOfEmp).filter(Boolean);
+      return `<div class="lk-row"><div><div class="nm">${g && g !== x.name ? `<span>${esc(g)}</span>` : ''}${esc(x.name)}</div>
+        <div class="who${people.length ? '' : ' none'}">${people.length ? '담당 ' + people.map(esc).join(', ') : '담당자 없음 (사업장 관리에서 지정)'}</div></div>
+        <span class="lk-chip ${wrote ? 'wip' : 'empty'}">${wrote ? '작성 중' : '작성 내용 없음'}</span></div>`;
+    }).join('') +
+    `<div class="lk-tip">💡 각 사업장 담당자가 작성을 마치면 <b>전체 현황</b>에서 <b>[완료로 표시]</b>를 눌러 주세요. 모든 사업장이 완료되면 <b>[보고서 확정]</b>을 할 수 있습니다.</div>`;
+  $('lk-dlg').showModal();
+  $('lk-go').focus();
+}
+$('lk-close').onclick = () => $('lk-dlg').close();
+$('lk-go').onclick = () => { $('lk-dlg').close(); show('status'); };
+$('lk-remind').onclick = () => { $('lk-dlg').close(); sendRemind(lkSids); };
 
 // ---------- 파일 내려받기 ----------
 async function downloadFile(url, name, btn) {
