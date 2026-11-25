@@ -1804,6 +1804,9 @@ function applyLock(r) {
   $('ed-lock').innerHTML = `<svg class="i"><use href="#i-lock"/></svg>${locked ? '확정 해제' : '보고서 확정'}`;
   // 확정·해제는 관리자만: 다른 사용자에게는 버튼을 보이지 않는다
   $('ed-lock').classList.toggle('hidden', me?.role !== 'admin');
+  // 완료 안 된 사업장이 있으면 버튼에 마우스를 올렸을 때 알려 줌
+  const undone = locked ? [] : Ops.reportUndone(db, r);
+  $('ed-lock').title = locked ? '' : undone.length ? `완료로 표시되지 않은 사업장 ${undone.length}곳: ${undone.join(', ')}` : '모든 사업장 완료 · 확정할 수 있습니다';
 }
 $('ed-lock').onclick = async () => {
   const r = cur();
@@ -1812,6 +1815,12 @@ $('ed-lock').onclick = async () => {
     if (!confirm('보고서 확정을 해제할까요? 해제하면 다시 수정할 수 있습니다.')) return;
     commit({ type: 'report.lock', id: r.id, value: false, role: me?.role });
   } else {
+    // 모든 사업장이 [완료로 표시]되어야 확정할 수 있다
+    const undone = Ops.reportUndone(db, r);
+    if (undone.length) {
+      if (confirm(`아직 완료로 표시되지 않은 사업장이 ${undone.length}곳 있어 보고서를 확정할 수 없습니다.\n\n${undone.map(x => '· ' + x).join('\n')}\n\n각 사업장 담당자가 작성을 마치면 [전체 현황]에서 [완료로 표시]해 주세요.\n모든 사업장이 완료되면 확정할 수 있습니다.\n\n전체 현황 화면으로 이동할까요?`)) show('status');
+      return;
+    }
     if (!confirm(`${fmtFull(r.date)} 보고서를 확정할까요?\n확정하면 내용을 수정할 수 없고, 관리자만 해제할 수 있습니다.`)) return;
     try { await waitSaved(); } catch (err) { return alert(err.message); }
     commit({ type: 'report.lock', id: r.id, value: true, role: me?.role });

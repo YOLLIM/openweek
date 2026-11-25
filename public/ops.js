@@ -272,6 +272,15 @@
     return COLS.some(c => st[c.key]) || KINDS.some(k => has(k, sid)) || Object.keys(r.works || {}).some(key => key.startsWith(sid + ':') && has('works', key));
   }
 
+  // 보고서 확정 전 검사: 보고서에 들어가는 사업장(사용 중이거나 내용이 있는 곳) 중 [완료로 표시]가 안 된 곳 → '회사 사업장' 이름 목록
+  function reportUndone(db, r) {
+    const out = [];
+    for (const g of db.groups || []) for (const s of (db.sites || []).filter(x => x.groupId === g.id)) {
+      if ((s.active || siteHasData(r, s.id)) && !r.done?.[s.id]) out.push(g.name === s.name ? s.name : `${g.name} ${s.name}`);
+    }
+    return out;
+  }
+
   const fail = msg => { throw new Error(msg); };
   const name = v => (typeof v === 'string' && v.trim()) || fail('이름이 비어 있습니다.');
   function swap(arr, i, j) { if (arr[i] && arr[j]) [arr[i], arr[j]] = [arr[j], arr[i]]; }
@@ -409,8 +418,12 @@
         // 확정과 확정 해제 모두 관리자만
         const r = rep();
         if (op.role !== 'admin') fail('보고서 확정과 해제는 관리자만 할 수 있습니다.');
-        if (op.value) r.locked = { by: op.by || '', at: op.ts || Date.now() };
-        else delete r.locked;
+        if (op.value) {
+          // 모든 사업장이 완료로 표시되어야 확정할 수 있다
+          const undone = reportUndone(db, r);
+          if (undone.length) fail(`완료로 표시되지 않은 사업장이 ${undone.length}곳 있어 확정할 수 없습니다: ${undone.join(', ')}\n전체 현황에서 각 사업장을 [완료로 표시]한 뒤 확정하세요.`);
+          r.locked = { by: op.by || '', at: op.ts || Date.now() };
+        } else delete r.locked;
         break;
       }
       case 'report.delete':
@@ -617,7 +630,7 @@
     }
   }
 
-  const api = { MAX_REP_IMGS, COLS, KINDS, ITOA_ROWS, uid, toISO, addDays, seed, siteHasData, workParts, worksText, subKey, canEditSite, canEditItoa, canEditItoaSite, itoaSiteLabel, normalizeItoa, itoaLines, itoaAttRows, itoaAttTotal, itoaV3, itoaSiteMissing, itoaView, itoaSitesView, itoaStateFor, ITOA_KINDS, itoaRate, itoaRowSum, itoaRowText, itoaTotals, apply };
+  const api = { MAX_REP_IMGS, COLS, KINDS, ITOA_ROWS, uid, toISO, addDays, seed, siteHasData, reportUndone, workParts, worksText, subKey, canEditSite, canEditItoa, canEditItoaSite, itoaSiteLabel, normalizeItoa, itoaLines, itoaAttRows, itoaAttTotal, itoaV3, itoaSiteMissing, itoaView, itoaSitesView, itoaStateFor, ITOA_KINDS, itoaRate, itoaRowSum, itoaRowText, itoaTotals, apply };
   if (typeof module === 'object' && module.exports) module.exports = api;
   else root.Ops = api;
 })(this);
