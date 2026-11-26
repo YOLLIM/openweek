@@ -190,6 +190,19 @@
   .lk-chip.empty { background: #f1f1f1; color: #6b7280; }
   .lk-tip { font-size: 12.5px; color: #374151; background: #eef6f4; border: 1px solid #cfe9e2; border-radius: 10px; padding: 10px 12px; margin: 12px 0 6px; line-height: 1.6; }
   #lk-dlg .rm-foot { flex-wrap: wrap; justify-content: flex-end; }
+  /* 담당 사업장 완료 */
+  #ed-mydone.all { background: #e7f6ee; border-color: #9fd9b6; color: #15803d; }
+  #sd-dlg { width: 560px; max-width: calc(100vw - 20px); padding: 0; overflow: hidden; background: #fbf9f6; }
+  #sd-dlg .rm-head h3 .ic { background: linear-gradient(135deg, #34c08f, #0f766e); }
+  #sd-dlg .rm-foot { justify-content: flex-end; }
+  .sd-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 10px; background: #fff; border: 1px solid #ebe3d6; border-left: 4px solid #e5484d; border-radius: 10px; padding: 11px 12px; margin-bottom: 8px; }
+  .sd-row.done { border-left-color: #14a38b; background: #f6fcfa; }
+  .sd-row .nm { font-weight: 800; font-size: 14px; }
+  .sd-row .nm span { color: var(--muted); font-weight: 600; font-size: 12.5px; margin-right: 6px; }
+  .sd-row .st { font-size: 12px; color: #4b5563; margin-top: 4px; display: flex; gap: 6px; flex-wrap: wrap; }
+  .sd-row .st i { font-style: normal; padding: 1px 7px; border-radius: 99px; background: #f1f1f1; }
+  .sd-row .st i.y { background: #e7f6ee; color: #15803d; }
+  .sd-row .ok { font-size: 12px; color: #15803d; font-weight: 700; margin-top: 4px; }
   /* 개발구성 */
   .dv-gate { max-width: 420px; margin: 40px auto; text-align: center; padding: 30px 28px; }
   .dv-gate .ic { font-size: 34px; }
@@ -898,6 +911,7 @@
         <span class="avatars" id="ed-peers"></span>
         <button class="navy" id="ed-preview"><svg class="i"><use href="#i-print"/></svg>미리보기 / 인쇄</button>
         <button class="violet" id="ed-check"><svg class="i"><use href="#i-check"/></svg>주간보고 점검</button>
+        <button class="soft hidden" id="ed-mydone" title="담당 사업장 작성을 마쳤으면 완료로 표시합니다"><svg class="i"><use href="#i-check"/></svg>담당 사업장 완료</button>
         <button class="soft" id="ed-lock"><svg class="i"><use href="#i-lock"/></svg>보고서 확정</button>
         <button class="orange" id="ed-ppt"><svg class="i"><use href="#i-down"/></svg>주간보고서 PPT</button>
       </div>
@@ -1235,6 +1249,14 @@
       <button type="button" id="sv-later">나중에 하기</button>
       <button type="submit" class="teal" id="sv-send">제출</button></div>
   </form>
+</dialog>
+<dialog id="sd-dlg" aria-labelledby="sd-title">
+  <div class="rm-head">
+    <h3 id="sd-title"><span class="ic">✅</span>담당 사업장 작성 완료</h3>
+    <div class="sub" id="sd-sub"></div>
+  </div>
+  <div class="lk-body" id="sd-body"></div>
+  <div class="rm-foot"><button type="button" id="sd-close">닫기</button></div>
 </dialog>
 <dialog id="lk-dlg" aria-labelledby="lk-title">
   <div class="rm-head">
@@ -1835,6 +1857,7 @@ function applyLock(r) {
   $('ed-lock').innerHTML = `<svg class="i"><use href="#i-lock"/></svg>${locked ? '확정 해제' : '보고서 확정'}`;
   // 확정·해제는 관리자만: 다른 사용자에게는 버튼을 보이지 않는다
   $('ed-lock').classList.toggle('hidden', me?.role !== 'admin');
+  drawMyDoneBtn(r);
   // 완료 안 된 사업장이 있으면 버튼에 마우스를 올렸을 때 알려 줌
   const undone = locked ? [] : Ops.reportUndone(db, r);
   $('ed-lock').title = locked ? '' : undone.length ? `완료로 표시되지 않은 사업장 ${undone.length}곳: ${undone.join(', ')}` : '모든 사업장 완료 · 확정할 수 있습니다';
@@ -1855,6 +1878,43 @@ $('ed-lock').onclick = async () => {
   }
   renderEditor();
 };
+
+// 담당 사업장 완료: 내가 담당인 사업장 (보고서에 들어가는 곳)
+const mySites = r => reportSites(r).filter(x => (x.assignees || []).includes(me?.empNo));
+function drawMyDoneBtn(r) {
+  const mine = r ? mySites(r) : [], n = mine.filter(x => r.done?.[x.id]).length, b = $('ed-mydone');
+  b.classList.toggle('hidden', !mine.length);
+  if (!mine.length) return;
+  const all = n === mine.length;
+  b.classList.toggle('all', all);
+  b.innerHTML = `<svg class="i"><use href="#i-check"/></svg>${all ? '담당 사업장 완료됨' : '담당 사업장 완료'}${mine.length > 1 || !all ? ` (${n}/${mine.length})` : ''}`;
+}
+function openMyDone() {
+  const r = cur(); if (!r) return;
+  const mine = mySites(r), locked = !!r.locked;
+  $('sd-sub').textContent = locked ? `${weekLabel(r)} · 확정된 보고서라 완료 표시를 바꿀 수 없습니다.`
+    : `${weekLabel(r)} · 보고일 ${fmtFull(r.date)} — 작성을 마친 사업장을 완료로 표시하세요. 모든 사업장이 완료되면 관리자가 보고서를 확정합니다.`;
+  $('sd-body').innerHTML = mine.map(x => {
+    const g = groupName(x.groupId), st = siteStatus(r, x), d = r.done?.[x.id];
+    const chip = (y, t) => `<i class="${y ? 'y' : ''}">${t}</i>`;
+    return `<div class="sd-row${d ? ' done' : ''}"><div><div class="nm">${g && g !== x.name ? `<span>${esc(g)}</span>` : ''}${esc(x.name)}</div>
+      <div class="st">${chip(st.s1, st.s1 ? '1. 운영 업무 입력' : '1. 운영 업무 없음')}${chip(st.s2, `2. 변경 · 신규 ${st.s2}줄`)}${chip(st.s3, `3. 장애 · 이슈 ${st.s3}줄`)}</div>
+      ${d ? `<div class="ok">✓ 완료 · ${esc(d.by || '')}${d.at ? ' · ' + new Date(d.at).toLocaleString([], { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : ''}</div>` : ''}</div>
+      ${locked ? '' : d ? `<button type="button" class="sm" data-sd="undone" data-sid="${x.id}">완료 해제</button>` : `<button type="button" class="sm teal" data-sd="done" data-sid="${x.id}">완료로 표시</button>`}</div>`;
+  }).join('') + `<div class="lk-tip">💡 완료로 표시해도 확정 전까지는 계속 고칠 수 있습니다. 관리자가 <b>[보고서 확정]</b>을 하면 더 이상 고칠 수 없습니다.</div>`;
+  if (!$('sd-dlg').open) $('sd-dlg').showModal();
+}
+$('ed-mydone').onclick = openMyDone;
+$('sd-close').onclick = () => $('sd-dlg').close();
+$('sd-body').addEventListener('click', async e => {
+  const b = e.target.closest('[data-sd]'); if (!b) return;
+  const r = cur(), x = db.sites.find(z => z.id === b.dataset.sid); if (!r || !x) return;
+  const done = b.dataset.sd === 'done', st = siteStatus(r, x);
+  if (done && !st.s1 && !st.s2 && !st.s3 && !confirm(`${x.name} 사업장에 작성한 내용이 없습니다.\n그래도 완료로 표시할까요?`)) return;
+  if (done) { try { await waitSaved(); } catch (err) { return alert(err.message); } }
+  if (!commit({ type: 'report.done', id: r.id, sid: x.id, value: done })) return;
+  openMyDone(); drawMyDoneBtn(r); applyLock(r);
+});
 
 // 확정할 수 없을 때: 완료 안 된 사업장 · 담당자 · 작성 상태를 보여 주고 전체 현황 / 독촉 메일로 안내
 let lkSids = [];
