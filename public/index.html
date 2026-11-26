@@ -1887,7 +1887,9 @@ function drawMyDoneBtn(r) {
   if (!mine.length) return;
   const all = n === mine.length;
   b.classList.toggle('all', all);
-  b.innerHTML = `<svg class="i"><use href="#i-check"/></svg>${all ? '담당 사업장 완료됨' : '담당 사업장 완료'}${mine.length > 1 || !all ? ` (${n}/${mine.length})` : ''}`;
+  // 담당 사업장이 한 곳이면 숫자 없이, 여러 곳이면 "2곳 중 1곳 완료"
+  b.innerHTML = `<svg class="i"><use href="#i-check"/></svg>${all ? '담당 사업장 완료됨' : mine.length > 1 ? `담당 사업장 완료 (${mine.length}곳 중 ${n}곳)` : '담당 사업장 완료하기'}`;
+  b.title = all ? '담당 사업장을 모두 완료로 표시했습니다' : `담당 사업장 ${mine.length}곳 중 ${n}곳 완료 · 작성을 마쳤으면 눌러서 완료로 표시하세요`;
 }
 function openMyDone() {
   const r = cur(); if (!r) return;
